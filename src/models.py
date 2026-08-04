@@ -8,7 +8,6 @@ class Player:
     """
 
     player_key: str
-
     tournament_id: str
 
     first_name: str
@@ -19,4 +18,12 @@ class Player:
 
     standing: int | None
 
+
+@dataclass
+class Deck:
+    """
+    Represents one player's submitted deck.
+    """
+
+    player_key: str
     deck_url: str

@@ -1,35 +1,31 @@
-import sqlite3
+"""
+Main script for testing the RK9 roster parser.
+"""
+
+from src.roster import (
+    download_roster,
+    get_player_rows,
+    parse_player,
+)
+
+TOURNAMENT_ID = "TU01w1D52rjGebrE8szS"
 
 
-def create_database(db_name="database/pokemon.db"):
+def main():
+    soup = download_roster(TOURNAMENT_ID)
 
-    conn = sqlite3.connect(db_name)
-    cur = conn.cursor()
+    rows = get_player_rows(soup)
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS Players(
-        player_id TEXT,
-        tournament_id TEXT,
-        first_name TEXT,
-        last_name TEXT,
-        country TEXT,
-        division TEXT,
-        standing INTEGER,
-        deck_url TEXT
-    )
-    """)
+    print(f"Found {len(rows)} players\n")
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS DeckCards(
-        player_id TEXT,
-        card_name TEXT,
-        quantity INTEGER,
-        card_type TEXT,
-        set_number TEXT,
-        language TEXT
-    )
-    """)
+    player, deck = parse_player(rows[0], TOURNAMENT_ID)
 
-    conn.commit()
+    print("PLAYER")
+    print(player)
 
-    return conn
+    print("\nDECK")
+    print(deck)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,35 +1,25 @@
-import sqlite3
+"""
+Project configuration.
+"""
 
+# Base URLs
+BASE_URL = "https://rk9.gg"
+ROSTER_URL = BASE_URL + "/roster/"
+DECK_URL = BASE_URL + "/decklist/public/"
 
-def create_database(db_name="database/pokemon.db"):
+# Local folders
+DATABASE_FOLDER = "database"
+RAW_FOLDER = "raw"
+EXPORT_FOLDER = "exports"
 
-    conn = sqlite3.connect(db_name)
-    cur = conn.cursor()
+# SQLite database
+DATABASE_NAME = "pokemon.db"
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS Players(
-        player_id TEXT,
-        tournament_id TEXT,
-        first_name TEXT,
-        last_name TEXT,
-        country TEXT,
-        division TEXT,
-        standing INTEGER,
-        deck_url TEXT
+# HTTP request headers
+HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/137.0 Safari/537.36"
     )
-    """)
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS DeckCards(
-        player_id TEXT,
-        card_name TEXT,
-        quantity INTEGER,
-        card_type TEXT,
-        set_number TEXT,
-        language TEXT
-    )
-    """)
-
-    conn.commit()
-
-    return conn
+}
