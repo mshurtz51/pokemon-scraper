@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.pyc
+
+# Spyder
+.spyproject/
+
+# Virtual environments
+venv/
+.venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# SQLite database
+database/*.db
+
+# Downloaded HTML
+raw/
+
+# Exported files
+exports/
+
+# Windows
+Thumbs.db
