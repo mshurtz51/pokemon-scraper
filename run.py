@@ -2,29 +2,23 @@
 Main script for testing the RK9 roster parser.
 """
 
-from src.roster import (
-    download_roster,
-    get_player_rows,
-    parse_player,
-)
+from src.roster import parse_roster
 
 TOURNAMENT_ID = "TU01w1D52rjGebrE8szS"
 
 
 def main():
-    soup = download_roster(TOURNAMENT_ID)
 
-    rows = get_player_rows(soup)
+    players, decks = parse_roster(TOURNAMENT_ID)
 
-    print(f"Found {len(rows)} players\n")
+    print(f"Players parsed: {len(players)}")
+    print(f"Decks parsed:   {len(decks)}")
 
-    player, deck = parse_player(rows[0], TOURNAMENT_ID)
+    print("\nFirst player:")
+    print(players[0])
 
-    print("PLAYER")
-    print(player)
-
-    print("\nDECK")
-    print(deck)
+    print("\nFirst deck:")
+    print(decks[0])
 
 
 if __name__ == "__main__":
