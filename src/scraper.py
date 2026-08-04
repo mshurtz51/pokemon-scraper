@@ -1,35 +1,33 @@
-import sqlite3
+"""
+High-level tournament scraping functions.
+"""
+
+from src.deck import parse_deck
 
 
-def create_database(db_name="database/pokemon.db"):
+def parse_all_decks(players, decks):
+    """
+    Parse every deck in a tournament.
 
-    conn = sqlite3.connect(db_name)
-    cur = conn.cursor()
+    Parameters
+    ----------
+    players : list[Player]
+    decks : list[Deck]
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS Players(
-        player_id TEXT,
-        tournament_id TEXT,
-        first_name TEXT,
-        last_name TEXT,
-        country TEXT,
-        division TEXT,
-        standing INTEGER,
-        deck_url TEXT
-    )
-    """)
+    Returns
+    -------
+    list[DeckCard]
+    """
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS DeckCards(
-        player_id TEXT,
-        card_name TEXT,
-        quantity INTEGER,
-        card_type TEXT,
-        set_number TEXT,
-        language TEXT
-    )
-    """)
+    all_cards = []
 
-    conn.commit()
+    for player, deck in zip(players, decks):
 
-    return conn
+        cards = parse_deck(
+            deck.deck_url,
+            player.player_key,
+        )
+
+        all_cards.extend(cards)
+
+    return all_cards

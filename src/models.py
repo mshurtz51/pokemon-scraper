@@ -27,3 +27,21 @@ class Deck:
 
     player_key: str
     deck_url: str
+    
+
+@dataclass
+class DeckCard:
+    """
+    Represents one card in one player's deck.
+    """
+
+    player_key: str
+
+    quantity: int
+
+    card_name: str
+
+    card_type: str
+
+    set_code: str
+    card_number: str
