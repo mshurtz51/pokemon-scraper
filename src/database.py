@@ -23,9 +23,6 @@ def create_database():
     conn = get_connection()
     cursor = conn.cursor()
 
-    # -----------------------------
-    # tournaments
-    # -----------------------------
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS tournaments (
 
@@ -46,9 +43,6 @@ def create_database():
     )
     """)
 
-    # -----------------------------
-    # players
-    # -----------------------------
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS players (
 
@@ -69,9 +63,6 @@ def create_database():
     )
     """)
 
-    # -----------------------------
-    # decks
-    # -----------------------------
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS decks (
 
@@ -82,9 +73,6 @@ def create_database():
     )
     """)
 
-    # -----------------------------
-    # deck_cards
-    # -----------------------------
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS deck_cards (
 
@@ -145,6 +133,76 @@ def insert_players(players):
         )
         VALUES (?, ?, ?, ?, ?, ?, ?)
     """, player_rows)
+
+    conn.commit()
+    conn.close()
+
+
+def insert_decks(decks):
+    """
+    Insert a list of Deck objects into the database.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    deck_rows = []
+
+    for deck in decks:
+
+        deck_rows.append((
+            deck.player_key,
+            deck.deck_url,
+        ))
+
+    cursor.executemany("""
+        INSERT OR REPLACE INTO decks (
+
+            player_key,
+            deck_url
+
+        )
+        VALUES (?, ?)
+    """, deck_rows)
+
+    conn.commit()
+    conn.close()
+
+
+def insert_cards(cards):
+    """
+    Insert a list of DeckCard objects into the database.
+    """
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    card_rows = []
+
+    for card in cards:
+
+        card_rows.append((
+            card.player_key,
+            card.quantity,
+            card.card_name,
+            card.card_type,
+            card.set_code,
+            card.card_number,
+        ))
+
+    cursor.executemany("""
+        INSERT INTO deck_cards (
+
+            player_key,
+            quantity,
+            card_name,
+            card_type,
+            set_code,
+            card_number
+
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, card_rows)
 
     conn.commit()
     conn.close()

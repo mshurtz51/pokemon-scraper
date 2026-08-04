@@ -21,7 +21,11 @@ def parse_all_decks(players, decks):
 
     all_cards = []
 
-    for player, deck in zip(players, decks):
+    total = len(decks)
+
+    for i, (player, deck) in enumerate(zip(players, decks), start=1):
+
+        print(f"Parsing deck {i}/{total}")
 
         cards = parse_deck(
             deck.deck_url,

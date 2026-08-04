@@ -14,7 +14,11 @@ def fetch_deck(deck_url):
     Fetch a single RK9 decklist.
     """
 
-    response = requests.get(deck_url, headers=HEADERS)
+    response = requests.get(
+    deck_url,
+    headers=HEADERS,
+    timeout=30,
+)
 
     response.raise_for_status()
 
