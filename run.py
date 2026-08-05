@@ -1,24 +1,19 @@
 """
-Main script for testing the RK9 roster parser.
+Main entry point for the Pokemon TCG analytics project.
 """
 
-from src.roster import parse_roster
-
-TOURNAMENT_ID = "TU01w1D52rjGebrE8szS"
+from src.database import create_database
+from src.importer import sync_database
 
 
 def main():
+    """
+    Run the full ETL pipeline.
+    """
 
-    players, decks = parse_roster(TOURNAMENT_ID)
+    create_database()
 
-    print(f"Players parsed: {len(players)}")
-    print(f"Decks parsed:   {len(decks)}")
-
-    print("\nFirst player:")
-    print(players[0])
-
-    print("\nFirst deck:")
-    print(decks[0])
+    sync_database()
 
 
 if __name__ == "__main__":

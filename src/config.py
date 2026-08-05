@@ -2,18 +2,26 @@
 Project configuration.
 """
 
+from pathlib import Path
+
+# Project root
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 # Base URLs
 BASE_URL = "https://rk9.gg"
 ROSTER_URL = BASE_URL + "/roster/"
 DECK_URL = BASE_URL + "/decklist/public/"
 
 # Local folders
-DATABASE_FOLDER = "database"
-RAW_FOLDER = "raw"
-EXPORT_FOLDER = "exports"
+DATABASE_FOLDER = PROJECT_ROOT / "database"
+RAW_FOLDER = PROJECT_ROOT / "raw"
+EXPORT_FOLDER = PROJECT_ROOT / "exports"
+
+# Create database folder if needed
+DATABASE_FOLDER.mkdir(exist_ok=True)
 
 # SQLite database
-DATABASE_NAME = "pokemon.db"
+DATABASE_NAME = DATABASE_FOLDER / "pokemon.db"
 
 # HTTP request headers
 HEADERS = {

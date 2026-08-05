@@ -2,27 +2,48 @@
 Functions for downloading and parsing RK9 decklists.
 """
 
+import time
+
 import requests
 from bs4 import BeautifulSoup
+from requests.exceptions import RequestException
 
 from src.config import HEADERS
 from src.models import DeckCard
+
+# Reuse one HTTP session for the entire program
+SESSION = requests.Session()
+SESSION.headers.update(HEADERS)
 
 
 def fetch_deck(deck_url):
     """
     Fetch a single RK9 decklist.
+
+    Retries up to 3 times if the request temporarily fails.
     """
 
-    response = requests.get(
-    deck_url,
-    headers=HEADERS,
-    timeout=30,
-)
+    for attempt in range(3):
 
-    response.raise_for_status()
+        try:
 
-    return BeautifulSoup(response.text, "lxml")
+            response = SESSION.get(
+                deck_url,
+                timeout=30,
+            )
+
+            response.raise_for_status()
+
+            return BeautifulSoup(response.text, "lxml")
+
+        except RequestException:
+
+            if attempt == 2:
+                raise
+
+            print(f"  Request failed. Retrying ({attempt + 2}/3)...")
+
+            time.sleep(2)
 
 
 def parse_card(card_element, player_key):
