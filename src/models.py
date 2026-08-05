@@ -27,7 +27,7 @@ class Deck:
 
     player_key: str
     deck_url: str
-    
+
 
 @dataclass
 class DeckCard:
@@ -45,3 +45,38 @@ class DeckCard:
 
     set_code: str
     card_number: str
+
+
+@dataclass
+class RuleResult:
+    """
+    Result of evaluating one archetype rule.
+    """
+
+    card_name: str
+    operator: str
+    expected: int
+    actual: int
+    passed: bool
+
+
+@dataclass
+class ClassificationResult:
+    """
+    Result of classifying a deck.
+    """
+
+    overall: str
+    variant: str
+
+    matched: bool
+
+    priority: int | None
+
+    score: float
+
+    rule_results: list[RuleResult]
+
+    core_pokemon: list[str]
+
+    core_trainers: list[str]

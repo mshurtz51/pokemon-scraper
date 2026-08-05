@@ -16,10 +16,6 @@ METADATA_FILE = PROJECT_ROOT / "metadata" / "metadata.xlsx"
 def load_tournaments():
     """
     Load the tournaments worksheet.
-
-    Returns
-    -------
-    pandas.DataFrame
     """
 
     return pd.read_excel(
@@ -31,13 +27,20 @@ def load_tournaments():
 def load_sets():
     """
     Load the sets worksheet.
-
-    Returns
-    -------
-    pandas.DataFrame
     """
 
     return pd.read_excel(
         METADATA_FILE,
         sheet_name="sets",
+    )
+
+
+def load_archetypes():
+    """
+    Load the archetypes worksheet.
+    """
+
+    return pd.read_excel(
+        METADATA_FILE,
+        sheet_name="archetypes",
     )

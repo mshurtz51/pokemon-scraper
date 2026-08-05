@@ -17,8 +17,10 @@ DATABASE_FOLDER = PROJECT_ROOT / "database"
 RAW_FOLDER = PROJECT_ROOT / "raw"
 EXPORT_FOLDER = PROJECT_ROOT / "exports"
 
-# Create database folder if needed
+# Create folders if needed
 DATABASE_FOLDER.mkdir(exist_ok=True)
+RAW_FOLDER.mkdir(exist_ok=True)
+EXPORT_FOLDER.mkdir(exist_ok=True)
 
 # SQLite database
 DATABASE_NAME = DATABASE_FOLDER / "pokemon.db"
