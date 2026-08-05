@@ -70,7 +70,15 @@ def create_database():
 
             division TEXT,
 
-            standing INTEGER
+            standing INTEGER,
+
+            overall TEXT,
+
+            variant TEXT,
+
+            matched INTEGER,
+
+            score REAL
 
         )
     """)
@@ -104,6 +112,40 @@ def create_database():
 
         )
     """)
+
+    #
+    # Add classification columns for existing databases.
+    #
+
+    cursor.execute("PRAGMA table_info(players)")
+
+    existing_columns = {
+        row[1]
+        for row in cursor.fetchall()
+    }
+
+    new_columns = {
+
+        "overall": "TEXT",
+
+        "variant": "TEXT",
+
+        "matched": "INTEGER",
+
+        "score": "REAL",
+
+    }
+
+    for column, datatype in new_columns.items():
+
+        if column not in existing_columns:
+
+            cursor.execute(
+                f"""
+                ALTER TABLE players
+                ADD COLUMN {column} {datatype}
+                """
+            )
 
     conn.commit()
     conn.close()

@@ -131,14 +131,33 @@ def classify_deck(cards):
                 ):
                     best_partial = result
 
+    #
+    # Perfect match
+    #
+
     if best_match is not None:
         return best_match
 
-    if (
-        best_partial is not None
-        and best_partial.score > 0
-    ):
-        return best_partial
+    #
+    # Partial match -> Unknown
+    #
+
+    if best_partial is not None:
+
+        return ClassificationResult(
+            overall="Unknown",
+            variant="Unknown",
+            matched=False,
+            priority=None,
+            score=best_partial.score,
+            rule_results=best_partial.rule_results,
+            core_pokemon=[],
+            core_trainers=[],
+        )
+
+    #
+    # No match at all
+    #
 
     return ClassificationResult(
         overall="Unknown",
