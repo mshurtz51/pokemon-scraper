@@ -65,6 +65,46 @@ def select_archetype(df):
         choice - 1
     ]
 
+def select_variant(df):
+    """
+    Let the user choose a variant.
+    """
+
+    variants = sorted(
+        df["variant"]
+        .dropna()
+        .unique()
+    )
+
+    print()
+    print("=" * 60)
+    print("VARIANTS")
+    print("=" * 60)
+    print("1. Overall")
+
+    for i, variant in enumerate(
+        variants,
+        start=2,
+    ):
+
+        print(
+            f"{i}. {variant}"
+        )
+
+    choice = int(
+        input(
+            "\nSelect variant: "
+        )
+    )
+
+    if choice == 1:
+
+        return None
+
+    return variants[
+        choice - 2
+    ]
+
 
 def print_report(df, title):
     """
@@ -142,7 +182,6 @@ def print_report(df, title):
         )
     )
 
-
 def main():
 
     tournament_id, tournament_name = (
@@ -157,45 +196,48 @@ def main():
         df
     )
 
+    variant = select_variant(
+        df[
+            df["overall"]
+            == archetype
+        ]
+    )
+
     df = df[
-        df["overall"] == archetype
+        df["overall"]
+        == archetype
     ]
+
+    if variant is not None:
+
+        df = df[
+            df["variant"]
+            == variant
+        ]
 
     print()
     print("=" * 60)
     print(tournament_name)
     print(archetype)
-    print("=" * 60)
 
-    #
-    # Overall archetype
-    #
+    if variant is None:
+
+        print("Overall")
+
+    else:
+
+        print(variant)
+
+    print("=" * 60)
 
     print_report(
         df,
-        "OVERALL",
+        (
+            "OVERALL"
+            if variant is None
+            else variant
+        ),
     )
-
-    #
-    # Variants (largest to smallest)
-    #
-
-    variants = (
-        df.groupby("variant")["player_key"]
-        .nunique()
-        .sort_values(ascending=False)
-    )
-
-    for variant, _ in variants.items():
-
-        variant_df = df[
-            df["variant"] == variant
-        ]
-
-        print_report(
-            variant_df,
-            variant,
-        )
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 """
-Performance Index timeline by tournament.
+Meta Share timeline by tournament.
 """
 
 import pandas as pd
@@ -38,11 +38,10 @@ def select_tournaments():
         for x in choices.split(",")
     ]
 
-    selected = tournaments.iloc[
+    return tournaments.iloc[
         indices
     ]
 
-    return selected
 
 def select_level():
     """
@@ -65,6 +64,7 @@ def select_level():
         return "overall"
 
     return "variant"
+
 
 def select_archetype(df):
     """
@@ -101,82 +101,6 @@ def select_archetype(df):
         choice - 1
     ]
 
-
-
-
-def select_cut():
-    """
-    Select Performance Index cut.
-    """
-
-    print()
-    print("=" * 60)
-    print("PERFORMANCE INDEX")
-    print("=" * 60)
-    print("1. Top 64")
-    print("2. Top 128")
-    print("3. Top 512")
-
-    choice = int(
-        input("\nSelect: ")
-    )
-
-    mapping = {
-        1: 64,
-        2: 128,
-        3: 512,
-    }
-
-    return mapping[
-        choice
-    ]
-
-
-def select_performance_type():
-    """
-    Select actual or cumulative Performance Index.
-    """
-
-    print()
-    print("=" * 60)
-    print("PERFORMANCE INDEX TYPE")
-    print("=" * 60)
-    print("1. Actual")
-    print("2. Cumulative")
-
-    choice = int(
-        input("\nSelect: ")
-    )
-
-    return choice == 2
-
-
-def performance_index(
-    archetype_players,
-    total_players,
-    top_cut_players,
-    cut_size,
-):
-    """
-    Calculate Performance Index.
-    """
-
-    if archetype_players == 0:
-        return 0.0
-
-    expected = (
-        archetype_players
-        / total_players
-    ) * cut_size
-
-    if expected == 0:
-        return 0.0
-
-    return (
-        top_cut_players
-        / expected
-    )
-
 def main():
 
     tournaments = (
@@ -185,14 +109,6 @@ def main():
 
     level = (
         select_level()
-    )
-
-    cut = (
-        select_cut()
-    )
-
-    cumulative = (
-        select_performance_type()
     )
 
     results = (
@@ -252,54 +168,10 @@ def main():
                 deck_df
             )
 
-            if cumulative:
-
-                top_cut = len(
-                    deck_df[
-                        deck_df[
-                            "standing"
-                        ] <= cut
-                    ]
-                )
-
-                denominator = cut
-
-            else:
-
-                previous_cut = {
-                    64: 32,
-                    128: 64,
-                    512: 256,
-                }[
-                    cut
-                ]
-
-                top_cut = len(
-                    deck_df[
-                        (
-                            deck_df[
-                                "standing"
-                            ] > previous_cut
-                        )
-                        &
-                        (
-                            deck_df[
-                                "standing"
-                            ] <= cut
-                        )
-                    ]
-                )
-
-                denominator = (
-                    cut
-                    - previous_cut
-                )
-
-            pi = performance_index(
-                players,
-                total_players,
-                top_cut,
-                denominator,
+            meta_share = (
+                players
+                / total_players
+                * 100
             )
 
             rows.append(
@@ -308,7 +180,7 @@ def main():
                         group,
                     tournament[
                         "tournament_name"
-                    ]: pi,
+                    ]: meta_share,
                 }
             )
 
@@ -365,7 +237,7 @@ def main():
     if level == "overall":
 
         print(
-            f"ARCHETYPE PERFORMANCE INDEX TIMELINE (TOP {cut})"
+            "ARCHETYPE META SHARE TIMELINE"
         )
 
     else:
@@ -375,7 +247,7 @@ def main():
         )
 
         print(
-            f"VARIANT PERFORMANCE INDEX TIMELINE (TOP {cut})"
+            "VARIANT META SHARE TIMELINE"
         )
 
     print("=" * 60)
@@ -388,7 +260,7 @@ def main():
         formatters[
             column
         ] = (
-            "{:.2f}x".format
+            "{:.1f}%".format
         )
 
     print(
@@ -397,6 +269,6 @@ def main():
             formatters=formatters,
         )
     )
-
+    
 if __name__ == "__main__":
     main()

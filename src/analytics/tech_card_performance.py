@@ -56,7 +56,7 @@ def select_archetype(df):
     """
 
     archetypes = sorted(
-        df["overall"].unique()
+        df["overall"].dropna().unique()
     )
 
     print()
@@ -81,7 +81,12 @@ def select_archetype(df):
         choice - 1
     ]
 
+
 def select_variant(df):
+    """
+    Let the user choose a variant.
+    Selecting Overall returns None.
+    """
 
     variants = sorted(
         df["variant"]
@@ -196,7 +201,7 @@ def select_core_cards():
 
     print()
     print("=" * 60)
-    print("100% CORE CARDS")
+    print("99%+ CORE CARDS")
     print("=" * 60)
     print("1. Include")
     print("2. Exclude")
@@ -241,22 +246,20 @@ def summarize(
     cumulative,
 ):
     """
-    Return the Performance Index for a group of decks.
+    Return the Performance Index for a
+    collection of decks.
     """
 
-    players = len(
-        df
-    )
+    players = df["player_key"].nunique()
 
     if cumulative:
 
-        top_cut = len(
-            df[
-                df[
-                    "standing"
-                ] <= cut
-            ]
-        )
+        top_cut = (
+    df[
+        df["standing"] <= cut
+    ]["player_key"]
+    .nunique()
+)
 
         denominator = cut
 
@@ -266,25 +269,20 @@ def summarize(
             64: 32,
             128: 64,
             512: 256,
-        }[
-            cut
-        ]
+        }[cut]
 
-        top_cut = len(
-            df[
-                (
-                    df[
-                        "standing"
-                    ] > previous
-                )
-                &
-                (
-                    df[
-                        "standing"
-                    ] <= cut
-                )
-            ]
+        top_cut = (
+    df[
+        (
+            df["standing"] > previous
         )
+        &
+        (
+            df["standing"] <= cut
+        )
+    ]["player_key"]
+    .nunique()
+)
 
         denominator = (
             cut
@@ -305,42 +303,34 @@ def main():
         tournament_name,
     ) = select_tournament()
 
-    df = (
-        get_archetype_card_performance(
-            tournament_id
-        )
+    df = get_archetype_card_performance(
+        tournament_id
     )
 
-    archetype = (
-        select_archetype(
-            df
-        )
+    archetype = select_archetype(
+        df
     )
-    
-    variant = (
-    select_variant(
+
+    variant = select_variant(
         df[
             df["overall"]
             == archetype
         ]
     )
-)
 
     df = df[
-    df["overall"]
-    == archetype
-]
-
-if variant is not None:
-
-    df = df[
-        df["variant"]
-        == variant
+        df["overall"]
+        == archetype
     ]
 
-    cut = (
-        select_cut()
-    )
+    if variant is not None:
+
+        df = df[
+            df["variant"]
+            == variant
+        ]
+
+    cut = select_cut()
 
     cumulative = (
         select_performance_type()
@@ -371,38 +361,27 @@ if variant is not None:
 
         with_players = (
             df[
-                df[
-                    "card_name"
-                ] == card
+                df["card_name"]
+                == card
             ]["player_key"]
             .unique()
         )
 
         with_df = (
-            df[
-                df[
-                    "player_key"
-                ].isin(
-                    with_players
-                )
-            ]
-            .drop_duplicates(
-                "player_key"
-            )
-        )
+    df[
+        df["player_key"]
+        .isin(with_players)
+    ]
+    .copy()
+)
 
         without_df = (
-            df[
-                ~df[
-                    "player_key"
-                ].isin(
-                    with_players
-                )
-            ]
-            .drop_duplicates(
-                "player_key"
-            )
-        )
+    df[
+        ~df["player_key"]
+        .isin(with_players)
+    ]
+    .copy()
+)
 
         with_pi = summarize(
             with_df,
@@ -420,37 +399,26 @@ if variant is not None:
 
         rows.append(
             {
-                "Card":
-                    card,
-
-                "Decks":
-                    len(
-                        with_df
-                    ),
-
-                "Others":
-                    len(
-                        without_df
-                    ),
-
-                "Inclusion":
-                    (
-                        len(
-                            with_df
-                        )
-                        / tournament_players
-                        * 100
-                    ),
-
-                "With PI":
-                    with_pi,
-
-                "Others PI":
-                    without_pi,
-
-                "Diff":
+                "Card": card,
+                "Decks": with_df[
+    "player_key"
+].nunique(),
+                "Others": without_df[
+    "player_key"
+].nunique(),
+                "Inclusion": (with_df[
+    "player_key"
+].nunique()
+/
+tournament_players
+* 100
+                ),
+                "With PI": with_pi,
+                "Others PI": without_pi,
+                "Diff": (
                     with_pi
-                    - without_pi,
+                    - without_pi
+                ),
             }
         )
 
@@ -459,19 +427,15 @@ if variant is not None:
     )
 
     report = report[
-        report[
-            "Inclusion"
-        ]
+        report["Inclusion"]
         >= minimum_inclusion
     ]
 
     if not include_core:
 
         report = report[
-            report[
-                "Inclusion"
-            ]
-            < 100
+            report["Inclusion"]
+            < 99
         ]
 
     report = report.sort_values(
@@ -481,25 +445,16 @@ if variant is not None:
 
     print()
     print("=" * 60)
-    print(
-        tournament_name
-    )
-    print(
-    archetype
-)
+    print(tournament_name)
+    print(archetype)
 
-if variant is None:
+    if variant is None:
+        print("Overall")
+    else:
+        print(variant)
 
-    print(
-        "Overall"
-    )
-
-else:
-
-    print(
-        variant
-    )
     print("TECH CARD PERFORMANCE")
+
     print(
         (
             "CUMULATIVE"
@@ -508,27 +463,35 @@ else:
         )
         + f" TOP {cut}"
     )
+
     print("=" * 60)
     print()
-
     print(
-        report.to_string(
-            index=False,
-            formatters={
-                "Inclusion":
-                    "{:.1f}%".format,
+print(
+    report.to_string(
+        index=False,
+        formatters={
+            "Decks":
+                "{:.0f}".format,
 
-                "With PI":
-                    "{:.2f}x".format,
+            "Others":
+                "{:.0f}".format,
 
-                "Others PI":
-                    "{:.2f}x".format,
+            "Inclusion":
+                "{:.1f}%".format,
 
-                "Diff":
-                    "{:+.2f}".format,
-            },
-        )
+            "With PI":
+                "{:.2f}x".format,
+
+            "Others PI":
+                "{:.2f}x".format,
+
+            "Diff":
+                "{:+.2f}".format,
+        },
     )
-        
+)
+)
+    
 if __name__ == "__main__":
     main()

@@ -209,7 +209,8 @@ def get_all_tournament_results():
 
             tournament_id,
             standing,
-            overall
+            overall,
+            variant
 
         FROM players
 
@@ -380,6 +381,58 @@ def get_archetype_card_performance(tournament_id):
         query,
         conn,
         params=(tournament_id,),
+    )
+
+    conn.close()
+
+    return df
+
+def get_all_archetype_cards():
+    """
+    Return every classified Masters deck card across
+    every tournament.
+    """
+
+    conn = get_connection()
+
+    query = """
+        SELECT
+
+            p.tournament_id,
+            t.tournament_name,
+
+            p.player_key,
+            p.overall,
+            p.variant,
+
+            dc.card_name,
+            dc.quantity
+
+        FROM players p
+
+        INNER JOIN tournaments t
+
+            ON p.tournament_id = t.tournament_id
+
+        INNER JOIN deck_cards dc
+
+            ON p.player_key = dc.player_key
+
+        WHERE
+
+            p.division = 'Masters'
+
+        ORDER BY
+
+            t.start_date,
+            p.overall,
+            p.variant,
+            dc.card_name
+    """
+
+    df = pd.read_sql_query(
+        query,
+        conn,
     )
 
     conn.close()
