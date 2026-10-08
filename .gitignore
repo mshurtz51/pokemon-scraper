@@ -23,3 +23,7 @@ exports/
 
 # Windows
 Thumbs.db
+
+# Local project context
+AGENTS.md
+PROJECT_CONTEXT.md
