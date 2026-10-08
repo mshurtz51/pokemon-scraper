@@ -99,7 +99,11 @@ Reusable database queries are in [src/analytics_queries.py](src/analytics_querie
 - Core cards and tech-card performance
 - Cumulative conversion and top-cut conversion
 - Performance index timelines
-- Archetype and variant comparisons
+- Metagame variant breakdowns
+
+The current user-facing visualization roadmap is complete through Top Cut
+Conversion. Variant Compare was intentionally removed because it overlapped
+too closely with the existing Metagame Variant Breakdown visualization.
 
 Visualization scripts are in [src/visualizations/](src/visualizations). Shared dimensions, colors, typography, and export behavior are maintained in [src/visualizations/chart_style.py](src/visualizations/chart_style.py).
 
@@ -117,9 +121,18 @@ For visualization changes, run the relevant script and inspect the rendered imag
 
 ## Project status
 
-The scraper, database, classification system, analytics foundation, and initial visualization library are in place. Current visualization work is progressing through card inclusion and the remaining analytics views before the public interface is built.
+The scraper, database, classification system, analytics foundation, and
+user-facing visualization library are in place. The next development phase is:
 
-Matchup, pairing, and round-by-round analytics are intentionally deferred to a later version because that data is not yet part of the current pipeline.
+1. Ingest the remaining tournaments.
+2. Update and validate the tournament and set metadata spreadsheets.
+3. Add and validate pairings data.
+
+The public interface remains a later phase. Pairings and round-by-round
+analytics begin after the broader tournament dataset and metadata are updated.
+
+Actual card images remain deferred until a reliable card-image source is
+available.
 
 ## License
 
