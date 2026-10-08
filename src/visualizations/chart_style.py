@@ -204,6 +204,9 @@ def save_chart(
     fig,
     filename,
     output_directory="output/visualizations",
+    bbox_inches="tight",
+    facecolor=None,
+    opaque_background=False,
 ):
     """
     Save a chart using the project's standard export settings.
@@ -218,6 +221,18 @@ def save_chart(
 
     output_directory : str or Path
         Directory where the chart will be saved.
+
+    bbox_inches : str or None
+        Bounding-box mode passed to Matplotlib. Use ``None`` for charts
+        whose figure-level layout should be preserved without tight-bound
+        transform calculations.
+
+    facecolor : str or None
+        Optional export background color. Defaults to the figure facecolor.
+
+    opaque_background : bool
+        Composite the saved image onto the export background so the PNG has
+        no transparent pixels.
 
     Returns
     -------
@@ -241,8 +256,29 @@ def save_chart(
     fig.savefig(
         output_path,
         dpi=DPI,
-        bbox_inches="tight",
-        facecolor=fig.get_facecolor(),
+        bbox_inches=bbox_inches,
+        facecolor=(
+            fig.get_facecolor()
+            if facecolor is None
+            else facecolor
+        ),
     )
+
+    if opaque_background:
+        from PIL import Image
+
+        background_color = (
+            fig.get_facecolor()
+            if facecolor is None
+            else facecolor
+        )
+        image = Image.open(output_path).convert("RGBA")
+        background = Image.new(
+            "RGBA",
+            image.size,
+            background_color,
+        )
+        background.alpha_composite(image)
+        background.convert("RGB").save(output_path)
 
     return output_path
