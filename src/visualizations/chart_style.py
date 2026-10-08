@@ -272,7 +272,8 @@ def save_chart(
             if facecolor is None
             else facecolor
         )
-        image = Image.open(output_path).convert("RGBA")
+        with Image.open(output_path) as source_image:
+            image = source_image.convert("RGBA")
         background = Image.new(
             "RGBA",
             image.size,
