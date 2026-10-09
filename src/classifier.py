@@ -47,42 +47,54 @@ def evaluate_rule(card_count, operator, value):
     raise ValueError(f"Unknown operator: {operator}")
 
 
-def classify_deck(cards):
+def prepare_rules(rules):
+    """Compile the metadata rule table for repeated deck classification."""
+
+    compiled = []
+
+    for priority in sorted(rules["priority"].unique()):
+        priority_rules = rules[rules["priority"] == priority]
+
+        for (overall, variant), group in priority_rules.groupby(
+            ["overall_archetype", "variant"]
+        ):
+            checks = [
+                (row["card_name"], row["operator"], row["value"])
+                for _, row in group.iterrows()
+            ]
+            compiled.append((priority, overall, variant, checks))
+
+    return compiled
+
+
+def classify_deck(cards, rules=None):
     """
     Classify a deck into the best matching archetype.
     """
 
-    rules = load_archetypes()
+    if rules is None:
+        rules = prepare_rules(load_archetypes())
 
     card_counts = count_cards(cards)
 
     best_match = None
     best_partial = None
 
-    for priority in sorted(rules["priority"].unique()):
-
-        priority_rules = rules[
-            rules["priority"] == priority
-        ]
-
-        for (overall, variant), group in priority_rules.groupby(
-            ["overall_archetype", "variant"]
-        ):
+    for priority, overall, variant, checks in rules:
 
             passed_rules = 0
             rule_results = []
 
-            for _, rule in group.iterrows():
-
+            for card_name, operator, value in checks:
                 actual = card_counts.get(
-                    rule["card_name"],
+                    card_name,
                     0,
                 )
 
                 passed = evaluate_rule(
                     actual,
-                    rule["operator"],
-                    rule["value"],
+                    operator,
+                    value,
                 )
 
                 if passed:
@@ -90,15 +102,15 @@ def classify_deck(cards):
 
                 rule_results.append(
                     RuleResult(
-                        card_name=rule["card_name"],
-                        operator=rule["operator"],
-                        expected=rule["value"],
+                        card_name=card_name,
+                        operator=operator,
+                        expected=value,
                         actual=actual,
                         passed=passed,
                     )
                 )
 
-            score = passed_rules / len(group)
+            score = passed_rules / len(checks)
 
             result = ClassificationResult(
                 overall=overall,

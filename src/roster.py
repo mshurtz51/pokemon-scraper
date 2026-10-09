@@ -59,6 +59,12 @@ def parse_player(row, tournament_id):
     if link is not None:
         deck_url = "https://rk9.gg" + link["href"]
 
+    # A roster row can exist without a public deck list. Such a row cannot be
+    # represented in the deck-based pipeline because the RK9 deck-list ID is
+    # the project's player key.
+    if deck_url is None:
+        return None, None
+
     # NEW: player key comes from the deck URL
     player_key = create_player_key(deck_url)
 
@@ -100,6 +106,18 @@ def parse_roster(tournament_id):
     for row in rows:
 
         player, deck = parse_player(row, tournament_id)
+
+        if player is None:
+            columns = row.find_all("td")
+            name = " ".join(
+                column.get_text(" ", strip=True) for column in columns[1:3]
+            )
+            standing = columns[6].get_text(strip=True) if len(columns) > 6 else "?"
+            print(
+                f"  Skipping roster row without public deck list: "
+                f"{name} (standing {standing})"
+            )
+            continue
 
         players.append(player)
         decks.append(deck)
