@@ -57,7 +57,10 @@ def parse_card(card_element, player_key):
 
     card_type = card_element["data-cardtype"]
 
-    set_code, card_number = card_element["data-setnum"].split("-")
+    # RK9 normally uses ``SET-NUMBER``. Some newer or special cards include
+    # an additional hyphen in the card identifier, so only split at the first
+    # separator and preserve the remainder as the card number.
+    set_code, card_number = card_element["data-setnum"].split("-", 1)
 
     return DeckCard(
         player_key=player_key,
