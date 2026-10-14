@@ -172,6 +172,8 @@ selected archetype is the focal deck whose win rate is measured. Omit
 `--tournament-id` to aggregate all stored tournaments. Use `--variants` to
 group opponents by variant, or add `--variant` to select one exact focal
 variant.
+The command also prints a `TOTAL` row calculated from all games rather than
+averaging opponent rows.
 
 Matchup `win_rate` uses the tournament scoring convention: a win contributes
 three points, a tie contributes one point, and a loss contributes zero.
