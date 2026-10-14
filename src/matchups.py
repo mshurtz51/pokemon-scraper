@@ -1394,6 +1394,70 @@ def get_day_two_meta_share(
     ).reset_index(drop=True)
 
 
+def get_day_two_meta_share_delta(
+    tournament_id: str,
+    start_round: int = 1,
+    end_round: int = 8,
+    division: str = "Masters",
+    use_variants: bool = False,
+) -> pd.DataFrame:
+    """Compare Day 2 field composition between two rounds.
+
+    ``delta_percentage_points`` is the later round's share minus the earlier
+    round's share. Groups absent from either round are included with a zero
+    share so emerging or eliminated archetypes remain visible.
+    """
+
+    if start_round < 1 or end_round < 1:
+        raise ValueError("Round numbers must be positive.")
+    if start_round == end_round:
+        raise ValueError("Start and end rounds must be different.")
+
+    meta_share = get_day_two_meta_share(
+        tournament_id=tournament_id,
+        division=division,
+        use_variants=use_variants,
+    )
+    if meta_share.empty:
+        return pd.DataFrame()
+
+    selected = meta_share[meta_share["round"].isin([start_round, end_round])]
+    if selected.empty:
+        return pd.DataFrame()
+
+    shares = selected.pivot_table(
+        index="group",
+        columns="round",
+        values=["players", "total_day_2_contenders", "meta_share"],
+        aggfunc="first",
+        fill_value=0,
+    )
+    for metric in ("players", "total_day_2_contenders", "meta_share"):
+        for round_number in (start_round, end_round):
+            if (metric, round_number) not in shares:
+                shares[(metric, round_number)] = 0
+
+    report = pd.DataFrame(
+        {
+            "group": shares.index,
+            "start_round": start_round,
+            "end_round": end_round,
+            "start_players": shares[("players", start_round)].astype(int),
+            "end_players": shares[("players", end_round)].astype(int),
+            "start_meta_share": shares[("meta_share", start_round)],
+            "end_meta_share": shares[("meta_share", end_round)],
+        }
+    ).reset_index(drop=True)
+    report["delta_percentage_points"] = (
+        report["end_meta_share"] - report["start_meta_share"]
+    )
+    report["grouping"] = "variant" if use_variants else "archetype"
+    return report.sort_values(
+        ["delta_percentage_points", "end_meta_share", "group"],
+        ascending=[False, False, True],
+    ).reset_index(drop=True)
+
+
 def get_archetype_round_performance(
     tournament_id: str,
     division: str = "Masters",

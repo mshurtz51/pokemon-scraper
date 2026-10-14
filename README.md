@@ -131,6 +131,13 @@ The Day 2 field-composition report is queued next. It will use each round's
 stored contention flags to show how the archetype and variant mix among players
 still eligible for Day 2 differs from the full-tournament mix.
 
+Compare the Day 2 field composition between rounds with:
+
+```bash
+python run_day_two_meta_delta.py --tournament-id TU01w1D52rjGebrE8szS
+python run_day_two_meta_delta.py --tournament-id TU01w1D52rjGebrE8szS --variants
+```
+
 Matchup `win_rate` uses the tournament scoring convention: a win contributes
 three points, a tie contributes one point, and a loss contributes zero.
 Therefore, `win_rate` is `(wins * 3 + ties) / (games * 3)`. Reports also
