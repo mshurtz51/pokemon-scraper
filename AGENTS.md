@@ -349,6 +349,10 @@ Matchup `win_rate` is match-point adjusted: wins are worth three points,
 ties one point, and losses zero. `decisive_win_rate` remains available as the
 wins divided by wins plus losses measure.
 
+Tech-card matchup analysis measures the selected archetype's results against
+opponents whose deck contains or does not contain the selected card. Use the
+exact archetype-plus-variant filter when a single focal variant is required.
+
 ## Notion Project Management
 
 The connected Notion project page is the source of truth for project-management context, including priorities, roadmap, milestones, decisions, and status. The actual repository code is the implementation source of truth.

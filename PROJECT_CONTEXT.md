@@ -87,8 +87,10 @@ Card-level matchup analysis now joins selected directed matchups to the
 stored deck-card lists and compares each card's with-card and without-card
 match-point win rates.
 
-The tech card matchup analysis focuses that workflow on one selected
-archetype and card, then reports its opponent-by-opponent win and tie rates.
+The tech card matchup analysis focuses that workflow on one selected focal
+archetype and card, then reports the focal deck's results against opponent
+archetypes whose deck contains or does not contain that card. Exact focal
+variant selection is supported with the archetype-plus-variant filter.
 
 Round-level archetype and variant field composition now uses the stored Day 2
 contention flags. The survival report additionally compares each group's

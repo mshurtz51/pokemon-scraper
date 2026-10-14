@@ -160,11 +160,18 @@ For the focused tech-card matchup analysis, select one archetype and card:
 
 ```bash
 python run_tech_card_matchup.py --tournament-id TU01w1D52rjGebrE8szS --archetype Crustle --card "Tool Scrapper"
+python run_tech_card_matchup.py --archetype Dragapult --variant Dusknoir --card "Meowth ex" --variants
 ```
 
 This reports each opponent matchup twice—when the card is present and when it
 is absent—with games, wins, losses, ties, match-point win rate, tie rate,
 decisive win rate, and the with-card deltas.
+
+The tech-card report checks the selected card in the opponent's deck. The
+selected archetype is the focal deck whose win rate is measured. Omit
+`--tournament-id` to aggregate all stored tournaments. Use `--variants` to
+group opponents by variant, or add `--variant` to select one exact focal
+variant.
 
 Matchup `win_rate` uses the tournament scoring convention: a win contributes
 three points, a tie contributes one point, and a loss contributes zero.

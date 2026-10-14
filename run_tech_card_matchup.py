@@ -20,6 +20,10 @@ def main() -> None:
     parser.add_argument("--division", default="Masters")
     parser.add_argument("--opponent")
     parser.add_argument("--variants", action="store_true")
+    parser.add_argument(
+        "--variant",
+        help="Select one exact focal variant together with --archetype.",
+    )
     args = parser.parse_args()
 
     report = get_tech_card_matchup_analysis(
@@ -28,6 +32,7 @@ def main() -> None:
         card_name=args.card,
         division=args.division,
         use_variants=args.variants,
+        variant=args.variant,
     )
     if args.opponent:
         report = report[report["opponent"] == args.opponent]

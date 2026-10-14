@@ -1458,16 +1458,19 @@ def get_tech_card_matchup_analysis(
     card_name: str,
     division: str = "Masters",
     use_variants: bool = False,
+    variant: str | None = None,
 ) -> pd.DataFrame:
     """Return matchup results against opponents with or without a card.
 
     The selected ``archetype`` is the focal deck whose performance is measured.
     ``card_name`` is checked in the opponent's deck, so the report compares
     focal-archetype results against opponents with and without that card.
-    When ``use_variants`` is true, ``archetype`` matches an overall archetype
-    when possible, allowing all of its variants to be analyzed together. If it
-    matches only a variant label, that variant is selected. Both sides include
-    match-point win rate, tie rate, and decisive win rate.
+    When ``variant`` is supplied, the focal deck must match both the overall
+    archetype and that variant. Otherwise, when ``use_variants`` is true,
+    ``archetype`` matches an overall archetype when possible, allowing all of
+    its variants to be analyzed together. If it matches only a variant label,
+    that variant is selected. Both sides include match-point win rate, tie
+    rate, and decisive win rate.
     """
 
     records = get_matchup_records(tournament_id, division)
@@ -1485,9 +1488,12 @@ def get_tech_card_matchup_analysis(
 
     def is_selected(record: pd.Series, side: int) -> bool:
         overall = record[f"player{side}_overall"]
+        selected_variant = record[f"player{side}_variant"]
         selected_label = record[
             f"player{side}_{'variant' if use_variants else 'overall'}"
         ]
+        if variant is not None:
+            return overall == archetype and selected_variant == variant
         if use_variants and archetype in overall_labels:
             return overall == archetype
         return selected_label == archetype
