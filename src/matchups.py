@@ -1459,14 +1459,15 @@ def get_tech_card_matchup_analysis(
     division: str = "Masters",
     use_variants: bool = False,
 ) -> pd.DataFrame:
-    """Return matchup results for one archetype and selected card.
+    """Return matchup results against opponents with or without a card.
 
-    Results are grouped by opponent archetype or variant and compare games
-    from deck lists that contain ``card_name`` with games from deck lists that
-    do not. When ``use_variants`` is true, ``archetype`` matches an overall
-    archetype when possible, allowing all of its variants to be analyzed
-    together. If it matches only a variant label, that variant is selected.
-    Both sides include match-point win rate, tie rate, and decisive win rate.
+    The selected ``archetype`` is the focal deck whose performance is measured.
+    ``card_name`` is checked in the opponent's deck, so the report compares
+    focal-archetype results against opponents with and without that card.
+    When ``use_variants`` is true, ``archetype`` matches an overall archetype
+    when possible, allowing all of its variants to be analyzed together. If it
+    matches only a variant label, that variant is selected. Both sides include
+    match-point win rate, tie rate, and decisive win rate.
     """
 
     records = get_matchup_records(tournament_id, division)
@@ -1497,6 +1498,7 @@ def get_tech_card_matchup_analysis(
             directed_rows.append(
                 {
                     "player_key": record["player1_key"],
+                    "opponent_player_key": record["player2_key"],
                     "opponent": record[label2],
                     "match_result": record["match_result"],
                     "wins": int(record["match_result"] == "player1_win"),
@@ -1507,6 +1509,7 @@ def get_tech_card_matchup_analysis(
             directed_rows.append(
                 {
                     "player_key": record["player2_key"],
+                    "opponent_player_key": record["player1_key"],
                     "opponent": record[label1],
                     "match_result": record["match_result"],
                     "wins": int(record["match_result"] == "player2_win"),
@@ -1526,7 +1529,12 @@ def get_tech_card_matchup_analysis(
         return pd.DataFrame()
 
     conn = sqlite3.connect(str(DATABASE_NAME))
-    player_keys = directed["player_key"].dropna().unique().tolist()
+    player_keys = (
+        directed["opponent_player_key"]
+        .dropna()
+        .unique()
+        .tolist()
+    )
     if not player_keys:
         conn.close()
         return pd.DataFrame()
@@ -1547,7 +1555,9 @@ def get_tech_card_matchup_analysis(
     card_players = set(
         cards.loc[cards["card_name"] == card_name, "player_key"]
     )
-    directed["card_present"] = directed["player_key"].isin(card_players)
+    directed["card_present"] = directed["opponent_player_key"].isin(
+        card_players
+    )
     directed["ties"] = (
         directed["match_result"] == "tie_or_unknown"
     ).astype(int)
