@@ -184,7 +184,8 @@ between focal decks with and without the card. `match_point_delta_per_game`
 converts that difference into tournament match points per game, while
 `match_point_delta_per_100_games` provides a WAR-like scale for comparison.
 These are descriptive estimates, not causal claims, and do not assign a
-literal deck-slot cost.
+literal deck-slot cost. Like the tech-card matchup report, the selected
+archetype is the focal deck and the card is checked in the opponent's deck.
 
 Matchup `win_rate` uses the tournament scoring convention: a win contributes
 three points, a tie contributes one point, and a loss contributes zero.

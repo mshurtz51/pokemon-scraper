@@ -1660,13 +1660,14 @@ def get_tech_card_value_analysis(
     use_variants: bool = False,
     variant: str | None = None,
 ) -> dict[str, pd.DataFrame]:
-    """Estimate the value of a card in the selected archetype's deck.
+    """Estimate the value of an opponent tech card in a selected matchup.
 
-    The selected archetype is the focal deck. Results compare focal-deck games
-    where the focal deck contains ``card_name`` with games where it does not.
-    The returned reports include matchup value, round exposure, and a summary
-    with a field-weighted replacement score. The score is measured in
-    match-point percentage points per game, not a causal estimate.
+    The selected archetype is the focal deck. Results compare its games against
+    each opponent archetype when that opponent's deck contains ``card_name``
+    versus when it does not. The returned reports include matchup value, round
+    exposure, and a summary with a field-weighted replacement score. The score
+    is measured in match-point percentage points per game, not a causal
+    estimate.
     """
 
     records = get_matchup_records(tournament_id, division)
@@ -1708,6 +1709,7 @@ def get_tech_card_value_analysis(
                     "tournament_id": record["tournament_id"],
                     "round": int(record["round_number"]),
                     "player_key": record["player1_key"],
+                    "opponent_key": record["player2_key"],
                     "opponent": record[label2],
                     "match_result": record["match_result"],
                     "wins": int(record["match_result"] == "player1_win"),
@@ -1720,6 +1722,7 @@ def get_tech_card_value_analysis(
                     "tournament_id": record["tournament_id"],
                     "round": int(record["round_number"]),
                     "player_key": record["player2_key"],
+                    "opponent_key": record["player1_key"],
                     "opponent": record[label1],
                     "match_result": record["match_result"],
                     "wins": int(record["match_result"] == "player2_win"),
@@ -1751,7 +1754,7 @@ def get_tech_card_value_analysis(
         }
 
     conn = sqlite3.connect(str(DATABASE_NAME))
-    player_keys = directed["player_key"].dropna().unique().tolist()
+    player_keys = directed["opponent_key"].dropna().unique().tolist()
     placeholders = ", ".join("?" for _ in player_keys)
     cards = pd.read_sql_query(
         f"SELECT player_key, card_name FROM deck_cards WHERE player_key IN ({placeholders})",
@@ -1760,7 +1763,7 @@ def get_tech_card_value_analysis(
     )
     conn.close()
     card_players = set(cards.loc[cards["card_name"] == card_name, "player_key"])
-    directed["card_present"] = directed["player_key"].isin(card_players)
+    directed["card_present"] = directed["opponent_key"].isin(card_players)
     directed["ties"] = (directed["match_result"] == "tie_or_unknown").astype(int)
 
     def add_rates(frame: pd.DataFrame) -> pd.DataFrame:

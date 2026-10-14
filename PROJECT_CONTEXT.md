@@ -92,8 +92,9 @@ archetype and card, then reports the focal deck's results against opponent
 archetypes whose deck contains or does not contain that card. Exact focal
 variant selection is supported with the archetype-plus-variant filter.
 
-Tech-card value analysis extends this with a field-weighted replacement
-estimate, round-by-round card exposure, opponent exposure by round, and
+Tech-card value analysis extends this opponent-card comparison with a
+field-weighted replacement estimate, round-by-round card exposure, opponent
+exposure by round, and
 tournament-wide meta share by round. The replacement estimate is descriptive:
 it weights with-card and without-card matchup rates by the selected
 archetype's observed opponent field and reports the difference in match-point
