@@ -336,7 +336,8 @@ Completed matchup programs include:
 - Flattened tournament totals for round-level matchup cohorts
 - Archetype performance against the full field
 - Multi-tournament matchup summaries
-- Round-level Day 2 field composition by archetype or variant (queued)
+- Round-level Day 2 field composition by archetype or variant
+- Day 2 survival and conversion curves with field-relative survival index
 
 The current matchup programs include single-tournament and aggregated
 multi-tournament reports. Use the existing report runners while the matchup

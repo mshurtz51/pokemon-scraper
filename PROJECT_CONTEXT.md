@@ -83,9 +83,9 @@ are reviewed. Matchup `win_rate` uses match-point weighting, with ties worth
 one third of a win; `decisive_win_rate` remains available for comparisons that
 exclude ties.
 
-Queued next: a round-level archetype and variant field-composition report
-using the stored Day 2 contention flags, so later rounds can be compared with
-the tournament-wide deck mix.
+Round-level archetype and variant field composition now uses the stored Day 2
+contention flags. The survival report additionally compares each group's
+round-by-round conversion with the field-wide conversion baseline.
 
 ## 4. RK9 Scraper
 

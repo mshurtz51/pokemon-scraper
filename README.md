@@ -127,7 +127,7 @@ The multi-tournament matchup report aggregates directed archetype matchups
 across all stored tournaments, or across selected tournaments when
 `--tournament-id` is repeated.
 
-The Day 2 field-composition report is queued next. It will use each round's
+The Day 2 field-composition report uses each round's
 stored contention flags to show how the archetype and variant mix among players
 still eligible for Day 2 differs from the full-tournament mix.
 
@@ -136,6 +136,13 @@ Compare the Day 2 field composition between rounds with:
 ```bash
 python run_day_two_meta_delta.py --tournament-id TU01w1D52rjGebrE8szS
 python run_day_two_meta_delta.py --tournament-id TU01w1D52rjGebrE8szS --variants
+```
+
+The Day 2 survival curve compares each archetype's round-by-round conversion
+against its round-one contenders and the field-wide conversion baseline:
+
+```bash
+python run_day_two_survival.py --tournament-id TU01w1D52rjGebrE8szS --archetype Crustle
 ```
 
 Matchup `win_rate` uses the tournament scoring convention: a win contributes

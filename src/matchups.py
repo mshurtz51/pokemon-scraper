@@ -1448,6 +1448,111 @@ def get_day_two_meta_share_delta(
             "end_meta_share": shares[("meta_share", end_round)],
         }
     ).reset_index(drop=True)
+
+
+def get_day_two_survival_curve(
+    tournament_id: str,
+    division: str = "Masters",
+    use_variants: bool = False,
+    max_round: int | None = None,
+) -> pd.DataFrame:
+    """Return round-by-round Day 2 survival and conversion metrics.
+
+    ``conversion_rate`` is the share of an archetype's round-one contenders
+    still contending in each later round. ``field_conversion_rate`` applies
+    the same calculation to the entire Day 2-contending field. The
+    ``survival_index`` compares those rates, where ``1.00x`` is average.
+    """
+
+    meta_share = get_day_two_meta_share(
+        tournament_id=tournament_id,
+        division=division,
+        use_variants=use_variants,
+    )
+    if meta_share.empty:
+        return pd.DataFrame()
+    if max_round is not None:
+        meta_share = meta_share[meta_share["round"] <= max_round].copy()
+    if meta_share.empty:
+        return pd.DataFrame()
+
+    rounds = sorted(meta_share["round"].unique())
+    groups = sorted(meta_share["group"].unique())
+    grid = pd.MultiIndex.from_product(
+        [rounds, groups], names=["round", "group"]
+    ).to_frame(index=False)
+    report = grid.merge(
+        meta_share[
+            [
+                "round",
+                "group",
+                "players",
+                "total_day_2_contenders",
+                "meta_share",
+            ]
+        ],
+        on=["round", "group"],
+        how="left",
+    )
+    report["players"] = report["players"].fillna(0).astype(int)
+    report["meta_share"] = report["meta_share"].fillna(0.0)
+    report["total_day_2_contenders"] = (
+        report.groupby("round")["total_day_2_contenders"]
+        .transform("first")
+        .fillna(0)
+        .astype(int)
+    )
+
+    first_round = min(rounds)
+    start_players = report.loc[
+        report["round"] == first_round,
+        ["group", "players"],
+    ].rename(columns={"players": "start_players"})
+    start_total = int(
+        report.loc[
+            report["round"] == first_round,
+            "total_day_2_contenders",
+        ].iloc[0]
+    )
+    report = report.merge(start_players, on="group", how="left")
+    report["conversion_rate"] = (
+        report["players"] / report["start_players"].where(
+            report["start_players"] > 0
+        ) * 100
+    )
+    report["field_conversion_rate"] = (
+        report["total_day_2_contenders"] / start_total * 100
+        if start_total
+        else pd.NA
+    )
+    report["survival_index"] = (
+        report["conversion_rate"]
+        / report["field_conversion_rate"].where(
+            report["field_conversion_rate"] > 0
+        )
+    )
+    report["grouping"] = "variant" if use_variants else "archetype"
+    return (
+        report[
+            [
+                "round",
+                "group",
+                "players",
+                "start_players",
+                "conversion_rate",
+                "total_day_2_contenders",
+                "field_conversion_rate",
+                "survival_index",
+                "meta_share",
+                "grouping",
+            ]
+        ]
+        .sort_values(
+            ["round", "survival_index", "group"],
+            ascending=[True, False, True],
+        )
+        .reset_index(drop=True)
+    )
     report["delta_percentage_points"] = (
         report["end_meta_share"] - report["start_meta_share"]
     )
