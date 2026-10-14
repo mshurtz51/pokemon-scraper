@@ -116,11 +116,15 @@ Matchup reports can be run from the repository root:
 python run_matchup_report.py --tournament-id TU01w1D52rjGebrE8szS --archetype Dragapult --opponent Alakazam
 python run_field_performance.py --tournament-id TU01w1D52rjGebrE8szS
 python run_round_performance.py --tournament-id TU01w1D52rjGebrE8szS --archetype Dragapult
+python run_multi_matchup_report.py --archetype Dragapult
 ```
 
 The round-performance report shows each archetype's games, wins, losses,
 ties, and decisive win rate by round. Use `--day-2-filter yes` or
 `--day-2-filter no` to isolate the Day 2 contention breakdown.
+The multi-tournament matchup report aggregates directed archetype matchups
+across all stored tournaments, or across selected tournaments when
+`--tournament-id` is repeated.
 
 Visualization scripts are in [src/visualizations/](src/visualizations). Shared dimensions, colors, typography, and export behavior are maintained in [src/visualizations/chart_style.py](src/visualizations/chart_style.py).
 

@@ -501,6 +501,118 @@ def get_archetype_matchup_trends(
     ).reset_index(drop=True)
 
 
+def get_multi_tournament_matchup_summary(
+    tournament_ids: list[str] | None = None,
+    archetype: str | None = None,
+    opponent: str | None = None,
+    division: str = "Masters",
+    use_variants: bool = False,
+    include_unknown: bool = False,
+) -> pd.DataFrame:
+    """Return aggregated directed matchup results across tournaments.
+
+    Each completed pairing contributes one directed result for each player.
+    When ``tournament_ids`` is omitted, all tournaments in the pairing
+    database are included. Ties and unknown outcomes remain in ``games`` but
+    are excluded from the decisive-game win-rate denominator.
+    """
+
+    records = get_matchup_records(division=division)
+    if tournament_ids is not None:
+        records = records[records["tournament_id"].isin(tournament_ids)].copy()
+    if records.empty:
+        return pd.DataFrame()
+
+    label1 = "player1_variant" if use_variants else "player1_overall"
+    label2 = "player2_variant" if use_variants else "player2_overall"
+    records = records.dropna(subset=[label1, label2]).copy()
+    if not include_unknown:
+        records = records[
+            (records[label1] != "Unknown")
+            & (records[label2] != "Unknown")
+        ].copy()
+    if records.empty:
+        return pd.DataFrame()
+
+    directed = pd.concat(
+        [
+            records[
+                [
+                    "tournament_id",
+                    label1,
+                    label2,
+                    "player1_key",
+                    "match_result",
+                ]
+            ].rename(
+                columns={
+                    label1: "archetype",
+                    label2: "opponent",
+                    "player1_key": "player_key",
+                }
+            ).assign(
+                wins=lambda frame: (
+                    frame["match_result"] == "player1_win"
+                ).astype(int),
+                losses=lambda frame: (
+                    frame["match_result"] == "player2_win"
+                ).astype(int),
+            ),
+            records[
+                [
+                    "tournament_id",
+                    label2,
+                    label1,
+                    "player2_key",
+                    "match_result",
+                ]
+            ].rename(
+                columns={
+                    label2: "archetype",
+                    label1: "opponent",
+                    "player2_key": "player_key",
+                }
+            ).assign(
+                wins=lambda frame: (
+                    frame["match_result"] == "player2_win"
+                ).astype(int),
+                losses=lambda frame: (
+                    frame["match_result"] == "player1_win"
+                ).astype(int),
+            ),
+        ],
+        ignore_index=True,
+    )
+    if archetype is not None:
+        directed = directed[directed["archetype"] == archetype]
+    if opponent is not None:
+        directed = directed[directed["opponent"] == opponent]
+    if directed.empty:
+        return pd.DataFrame()
+
+    summary = (
+        directed.groupby(["archetype", "opponent"], as_index=False)
+        .agg(
+            tournaments=("tournament_id", "nunique"),
+            players=("player_key", "nunique"),
+            games=("match_result", "count"),
+            wins=("wins", "sum"),
+            losses=("losses", "sum"),
+        )
+    )
+    summary["ties_or_unknown"] = (
+        summary["games"] - summary["wins"] - summary["losses"]
+    )
+    summary["decisive_games"] = summary["wins"] + summary["losses"]
+    summary["win_rate"] = summary["wins"] / summary["decisive_games"].where(
+        summary["decisive_games"] > 0
+    )
+    return summary.sort_values(
+        ["games", "archetype", "opponent"],
+        ascending=[False, True, True],
+    ).reset_index(drop=True)
+
+
 def get_matchup_strength_cohorts(
     round_number: int,
     tournament_id: str | None = None,

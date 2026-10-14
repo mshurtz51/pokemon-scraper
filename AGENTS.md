@@ -332,11 +332,11 @@ Completed matchup programs include:
 - Round-level matchup cohorts with Day 2 contention
 - Flattened tournament totals for round-level matchup cohorts
 - Archetype performance against the full field
+- Multi-tournament matchup summaries
 
-The current next program is overall archetype performance by round, with
-optional overall/variant and Day 2 contention filters. Use the existing
-single-tournament report runners while the multi-tournament matchup view is
-still planned.
+The current matchup programs include single-tournament and aggregated
+multi-tournament reports. Use the existing report runners while the matchup
+visualization definitions are still being planned.
 
 ## Notion Project Management
 

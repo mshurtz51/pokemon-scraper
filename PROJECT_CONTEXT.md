@@ -76,9 +76,10 @@ archetypes, variants, rounds, records, and points.
 
 Current matchup analytics include directed matchup matrices, tournament
 trends, round-level matchup cohorts, Day 2 contention breakdowns, flattened
-tournament totals, and archetype performance against the full field. The next
-analytics program is overall archetype performance by round. A future
-multi-tournament matchup view remains planned.
+tournament totals, archetype performance against the full field, overall
+archetype performance by round, and aggregated multi-tournament matchup
+summaries. Matchup visualizations remain planned after the analytics reports
+are reviewed.
 
 ## 4. RK9 Scraper
 
