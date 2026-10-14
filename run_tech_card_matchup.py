@@ -32,7 +32,16 @@ def main() -> None:
         print("No tech-card matchup data matched those filters.")
         return
 
-    for column in ("win_rate", "tie_rate", "decisive_win_rate"):
+    for column in (
+        "win_rate_with_card",
+        "win_rate_without_card",
+        "tie_rate_with_card",
+        "tie_rate_without_card",
+        "decisive_win_rate_with_card",
+        "decisive_win_rate_without_card",
+        "win_rate_delta",
+        "tie_rate_delta",
+    ):
         report[column] = report[column].map(
             lambda value: f"{value:.1%}" if value == value else "-"
         )

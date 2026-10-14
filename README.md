@@ -162,8 +162,9 @@ For the focused tech-card matchup analysis, select one archetype and card:
 python run_tech_card_matchup.py --tournament-id TU01w1D52rjGebrE8szS --archetype Crustle --card "Tool Scrapper"
 ```
 
-This reports the selected card's opponent matchups, games, wins, losses,
-ties, match-point win rate, tie rate, and decisive win rate.
+This reports each opponent matchup twice—when the card is present and when it
+is absent—with games, wins, losses, ties, match-point win rate, tie rate,
+decisive win rate, and the with-card deltas.
 
 Matchup `win_rate` uses the tournament scoring convention: a win contributes
 three points, a tie contributes one point, and a loss contributes zero.

@@ -1461,9 +1461,10 @@ def get_tech_card_matchup_analysis(
 ) -> pd.DataFrame:
     """Return matchup results for selected decks that contain one card.
 
-    The selected archetype contributes only games played by deck lists that
-    contain ``card_name``. Results are grouped by opponent archetype or
-    variant and include match-point win rate, tie rate, and decisive win rate.
+    Results are grouped by opponent archetype or variant and compare games
+    from deck lists that contain ``card_name`` with games from deck lists that
+    do not. Both sides include match-point win rate, tie rate, and decisive
+    win rate.
     """
 
     records = get_matchup_records(tournament_id, division)
@@ -1528,36 +1529,91 @@ def get_tech_card_matchup_analysis(
     card_players = set(
         cards.loc[cards["card_name"] == card_name, "player_key"]
     )
-    directed = directed[directed["player_key"].isin(card_players)].copy()
-    if directed.empty:
-        return pd.DataFrame()
+    directed["card_present"] = directed["player_key"].isin(card_players)
     directed["ties"] = (
         directed["match_result"] == "tie_or_unknown"
     ).astype(int)
 
-    report = (
-        directed.groupby("opponent", as_index=False)
+    grouped = (
+        directed.groupby(["opponent", "card_present"], as_index=False)
         .agg(
-            players_with_card=("player_key", "nunique"),
             games=("match_result", "count"),
             wins=("wins", "sum"),
             losses=("losses", "sum"),
             ties=("ties", "sum"),
+            players=("player_key", "nunique"),
         )
     )
-    report["win_rate"] = (
-        report["wins"] + report["ties"] / 3
-    ) / report["games"]
-    report["tie_rate"] = report["ties"] / report["games"]
-    report["decisive_games"] = report["wins"] + report["losses"]
-    report["decisive_win_rate"] = report["wins"] / report[
+    grouped["win_rate"] = (
+        grouped["wins"] + grouped["ties"] / 3
+    ) / grouped["games"]
+    grouped["tie_rate"] = grouped["ties"] / grouped["games"]
+    grouped["decisive_games"] = grouped["wins"] + grouped["losses"]
+    grouped["decisive_win_rate"] = grouped["wins"] / grouped[
         "decisive_games"
-    ].where(report["decisive_games"] > 0)
+    ].where(grouped["decisive_games"] > 0)
+
+    report = grouped.pivot(
+        index="opponent",
+        columns="card_present",
+        values=[
+            "players",
+            "games",
+            "wins",
+            "losses",
+            "ties",
+            "win_rate",
+            "tie_rate",
+            "decisive_games",
+            "decisive_win_rate",
+        ],
+    )
+    report = report.reindex(
+        columns=pd.MultiIndex.from_product(
+            [
+                [
+                    "players",
+                    "games",
+                    "wins",
+                    "losses",
+                    "ties",
+                    "win_rate",
+                    "tie_rate",
+                    "decisive_games",
+                    "decisive_win_rate",
+                ],
+                [False, True],
+            ],
+            names=["metric", "card_present"],
+        ),
+        fill_value=0,
+    )
+    report.columns = [
+        f"{metric}_{'with_card' if present else 'without_card'}"
+        for metric, present in report.columns
+    ]
+    report = report.reset_index()
+    for presence in ("with_card", "without_card"):
+        no_games = report[f"games_{presence}"] == 0
+        report.loc[
+            no_games,
+            [
+                f"win_rate_{presence}",
+                f"tie_rate_{presence}",
+                f"decisive_win_rate_{presence}",
+            ],
+        ] = float("nan")
+    report["win_rate_delta"] = (
+        report["win_rate_with_card"] - report["win_rate_without_card"]
+    )
+    report["tie_rate_delta"] = (
+        report["tie_rate_with_card"] - report["tie_rate_without_card"]
+    )
     report["card_name"] = card_name
     report["archetype"] = archetype
     report["grouping"] = "variant" if use_variants else "archetype"
     return report.sort_values(
-        ["games", "win_rate", "opponent"],
+        ["games_with_card", "win_rate_delta", "opponent"],
         ascending=[False, False, True],
     ).reset_index(drop=True)
 
