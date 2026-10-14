@@ -161,6 +161,7 @@ For the focused tech-card matchup analysis, select one archetype and card:
 ```bash
 python run_tech_card_matchup.py --tournament-id TU01w1D52rjGebrE8szS --archetype Crustle --card "Tool Scrapper"
 python run_tech_card_matchup.py --archetype Dragapult --variant Dusknoir --card "Meowth ex" --variants
+python run_tech_card_value.py --archetype Slowking --card Shaymin
 ```
 
 This reports each opponent matchup twice—when the card is present and when it
@@ -174,6 +175,13 @@ group opponents by variant, or add `--variant` to select one exact focal
 variant.
 The command also prints a `TOTAL` row calculated from all games rather than
 averaging opponent rows.
+
+The tech-card value report adds a field-weighted replacement estimate,
+round-by-round card exposure, and opponent exposure by round. Its
+`tech_value_above_replacement` is the field-weighted win-rate difference
+between focal decks with and without the card. `match_point_delta_per_game`
+converts that difference into tournament match points per game. These are
+descriptive estimates, not causal claims.
 
 Matchup `win_rate` uses the tournament scoring convention: a win contributes
 three points, a tie contributes one point, and a loss contributes zero.

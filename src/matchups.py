@@ -1652,6 +1652,294 @@ def get_tech_card_matchup_analysis(
     ).reset_index(drop=True)
 
 
+def get_tech_card_value_analysis(
+    tournament_id: str | None,
+    archetype: str,
+    card_name: str,
+    division: str = "Masters",
+    use_variants: bool = False,
+    variant: str | None = None,
+) -> dict[str, pd.DataFrame]:
+    """Estimate the value of a card in the selected archetype's deck.
+
+    The selected archetype is the focal deck. Results compare focal-deck games
+    where the focal deck contains ``card_name`` with games where it does not.
+    The returned reports include matchup value, round exposure, and a summary
+    with a field-weighted replacement score. The score is measured in
+    match-point percentage points per game, not a causal estimate.
+    """
+
+    records = get_matchup_records(tournament_id, division)
+    if records.empty:
+        return {
+            "summary": pd.DataFrame(),
+            "matchups": pd.DataFrame(),
+            "rounds": pd.DataFrame(),
+            "exposure": pd.DataFrame(),
+        }
+
+    label1 = "player1_variant" if use_variants else "player1_overall"
+    label2 = "player2_variant" if use_variants else "player2_overall"
+    overall_labels = {
+        value
+        for value in pd.concat(
+            [records["player1_overall"], records["player2_overall"]]
+        ).dropna()
+    }
+
+    def is_selected(record: pd.Series, side: int) -> bool:
+        overall = record[f"player{side}_overall"]
+        selected_variant = record[f"player{side}_variant"]
+        selected_label = record[
+            f"player{side}_{'variant' if use_variants else 'overall'}"
+        ]
+        if variant is not None:
+            return overall == archetype and selected_variant == variant
+        if use_variants and archetype in overall_labels:
+            return overall == archetype
+        return selected_label == archetype
+
+    directed_rows = []
+    for _, record in records.iterrows():
+        if is_selected(record, 1):
+            directed_rows.append(
+                {
+                    "tournament_id": record["tournament_id"],
+                    "round": int(record["round_number"]),
+                    "player_key": record["player1_key"],
+                    "opponent": record[label2],
+                    "match_result": record["match_result"],
+                    "wins": int(record["match_result"] == "player1_win"),
+                    "losses": int(record["match_result"] == "player2_win"),
+                }
+            )
+        if is_selected(record, 2):
+            directed_rows.append(
+                {
+                    "tournament_id": record["tournament_id"],
+                    "round": int(record["round_number"]),
+                    "player_key": record["player2_key"],
+                    "opponent": record[label1],
+                    "match_result": record["match_result"],
+                    "wins": int(record["match_result"] == "player2_win"),
+                    "losses": int(record["match_result"] == "player1_win"),
+                }
+            )
+
+    directed = pd.DataFrame(directed_rows)
+    if directed.empty:
+        return {
+            "summary": pd.DataFrame(),
+            "matchups": pd.DataFrame(),
+            "rounds": pd.DataFrame(),
+            "exposure": pd.DataFrame(),
+        }
+    directed = directed[
+        (directed["match_result"] != "unknown")
+        & directed["opponent"].notna()
+        & (directed["opponent"] != "Unknown")
+    ].copy()
+    if directed.empty:
+        return {
+            "summary": pd.DataFrame(),
+            "matchups": pd.DataFrame(),
+            "rounds": pd.DataFrame(),
+            "exposure": pd.DataFrame(),
+        }
+
+    conn = sqlite3.connect(str(DATABASE_NAME))
+    player_keys = directed["player_key"].dropna().unique().tolist()
+    placeholders = ", ".join("?" for _ in player_keys)
+    cards = pd.read_sql_query(
+        f"SELECT player_key, card_name FROM deck_cards WHERE player_key IN ({placeholders})",
+        conn,
+        params=player_keys,
+    )
+    conn.close()
+    card_players = set(cards.loc[cards["card_name"] == card_name, "player_key"])
+    directed["card_present"] = directed["player_key"].isin(card_players)
+    directed["ties"] = (directed["match_result"] == "tie_or_unknown").astype(int)
+
+    def add_rates(frame: pd.DataFrame) -> pd.DataFrame:
+        frame = frame.copy()
+        frame["win_rate"] = (
+            frame["wins"] + frame["ties"] / 3
+        ) / frame["games"]
+        frame["tie_rate"] = frame["ties"] / frame["games"]
+        frame["decisive_games"] = frame["wins"] + frame["losses"]
+        frame["decisive_win_rate"] = frame["wins"] / frame["decisive_games"].where(
+            frame["decisive_games"] > 0
+        )
+        return frame
+
+    grouped = (
+        directed.groupby(["opponent", "card_present"], as_index=False)
+        .agg(
+            games=("match_result", "count"),
+            wins=("wins", "sum"),
+            losses=("losses", "sum"),
+            ties=("ties", "sum"),
+            players=("player_key", "nunique"),
+        )
+    )
+    grouped = add_rates(grouped)
+    opponent_totals = directed.groupby("opponent").size().rename("opponent_games")
+    grouped = grouped.merge(opponent_totals, on="opponent")
+    grouped["opponent_field_share"] = grouped["opponent_games"] / len(directed)
+
+    report = grouped.pivot(
+        index="opponent",
+        columns="card_present",
+        values=[
+            "players",
+            "games",
+            "wins",
+            "losses",
+            "ties",
+            "win_rate",
+            "tie_rate",
+            "decisive_games",
+            "decisive_win_rate",
+        ],
+    ).reindex(
+        columns=pd.MultiIndex.from_product(
+            [
+                [
+                    "players",
+                    "games",
+                    "wins",
+                    "losses",
+                    "ties",
+                    "win_rate",
+                    "tie_rate",
+                    "decisive_games",
+                    "decisive_win_rate",
+                ],
+                [False, True],
+            ]
+        ),
+        fill_value=0,
+    )
+    report.columns = [
+        f"{metric}_{'with_card' if present else 'without_card'}"
+        for metric, present in report.columns
+    ]
+    report = report.reset_index()
+    report["opponent_field_share"] = report["opponent"].map(
+        grouped.drop_duplicates("opponent").set_index("opponent")[
+            "opponent_field_share"
+        ]
+    )
+    for presence in ("with_card", "without_card"):
+        no_games = report[f"games_{presence}"] == 0
+        report.loc[
+            no_games,
+            [
+                f"win_rate_{presence}",
+                f"tie_rate_{presence}",
+                f"decisive_win_rate_{presence}",
+            ],
+        ] = float("nan")
+    report["win_rate_delta"] = report["win_rate_with_card"] - report[
+        "win_rate_without_card"
+    ]
+    report["match_point_delta"] = report["win_rate_delta"] * 3
+    report["card_name"] = card_name
+    report["archetype"] = archetype
+    report["grouping"] = "variant" if use_variants else "archetype"
+
+    round_group = (
+        directed.groupby(["round", "card_present"], as_index=False)
+        .agg(
+            games=("match_result", "count"),
+            players=("player_key", "nunique"),
+            wins=("wins", "sum"),
+            losses=("losses", "sum"),
+            ties=("ties", "sum"),
+        )
+    )
+    round_group = add_rates(round_group)
+    rounds = round_group.pivot(
+        index="round",
+        columns="card_present",
+        values=["games", "players", "win_rate", "tie_rate", "decisive_win_rate"],
+    ).reindex(
+        columns=pd.MultiIndex.from_product(
+            [["games", "players", "win_rate", "tie_rate", "decisive_win_rate"], [False, True]]
+        ),
+        fill_value=0,
+    )
+    rounds.columns = [
+        f"{metric}_{'with_card' if present else 'without_card'}"
+        for metric, present in rounds.columns
+    ]
+    rounds = rounds.reset_index()
+    rounds["card_presence_rate"] = directed.groupby("round")["card_present"].mean().reindex(
+        rounds["round"]
+    ).to_numpy()
+    rounds["win_rate_delta"] = rounds["win_rate_with_card"] - rounds[
+        "win_rate_without_card"
+    ]
+    rounds["match_point_delta"] = rounds["win_rate_delta"] * 3
+
+    total = directed.groupby("card_present", as_index=False).agg(
+        games=("match_result", "count"),
+        players=("player_key", "nunique"),
+        wins=("wins", "sum"),
+        losses=("losses", "sum"),
+        ties=("ties", "sum"),
+    )
+    total = add_rates(total)
+    total = total.set_index("card_present")
+    weighted = report.dropna(subset=["win_rate_without_card", "win_rate_with_card"])
+    weights = weighted["opponent_field_share"] / weighted["opponent_field_share"].sum()
+    weighted_without = (weights * weighted["win_rate_without_card"]).sum()
+    weighted_with = (weights * weighted["win_rate_with_card"]).sum()
+    summary = pd.DataFrame(
+        [
+            {
+                "archetype": archetype,
+                "card_name": card_name,
+                "tournaments": directed["tournament_id"].nunique(),
+                "players_without_card": total.loc[False, "players"],
+                "players_with_card": total.loc[True, "players"],
+                "games_without_card": total.loc[False, "games"],
+                "games_with_card": total.loc[True, "games"],
+                "card_presence_rate": directed["card_present"].mean(),
+                "win_rate_without_card": total.loc[False, "win_rate"],
+                "win_rate_with_card": total.loc[True, "win_rate"],
+                "win_rate_delta": total.loc[True, "win_rate"] - total.loc[False, "win_rate"],
+                "field_weighted_win_rate_without_card": weighted_without,
+                "field_weighted_win_rate_with_card": weighted_with,
+                "field_weighted_delta": weighted_with - weighted_without,
+                "tech_value_above_replacement": weighted_with - weighted_without,
+                "match_point_delta_per_game": (weighted_with - weighted_without) * 3,
+            }
+        ]
+    )
+
+    exposure = (
+        directed.groupby(["round", "opponent"], as_index=False)
+        .agg(
+            games=("match_result", "count"),
+            games_with_card=("card_present", "sum"),
+            games_without_card=("card_present", lambda values: (~values).sum()),
+        )
+    )
+    round_totals = exposure.groupby("round")["games"].sum().rename("round_games")
+    exposure = exposure.merge(round_totals, on="round")
+    exposure["opponent_field_share"] = exposure["games"] / exposure["round_games"]
+    exposure["card_presence_rate"] = exposure["games_with_card"] / exposure["games"]
+    return {
+        "summary": summary,
+        "matchups": report.sort_values(
+            "opponent_field_share", ascending=False
+        ).reset_index(drop=True),
+        "rounds": rounds.sort_values("round").reset_index(drop=True),
+        "exposure": exposure.sort_values(["round", "games"], ascending=[True, False]).reset_index(drop=True),
+    }
+
+
 def get_day_two_meta_share(
     tournament_id: str,
     division: str = "Masters",

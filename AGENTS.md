@@ -340,6 +340,7 @@ Completed matchup programs include:
 - Day 2 survival and conversion curves with field-relative survival index
 - Card-level performance within a directed archetype matchup
 - Tech card matchup analysis by selected archetype and card
+- Tech card value analysis with field weighting and round exposure
 
 The current matchup programs include single-tournament and aggregated
 multi-tournament reports. Use the existing report runners while the matchup
