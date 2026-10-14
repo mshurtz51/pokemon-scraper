@@ -11,6 +11,8 @@ The project is currently focused on building a reliable data and visualization f
 - Stores tournaments, players, decks, cards, and classifications in SQLite.
 - Classifies decks by archetype and variant using the project’s rule system.
 - Calculates tournament metrics such as meta share, average finish, card inclusion, conversion, and performance index.
+- Ingests RK9 pairings into a separate SQLite database for matchup analysis.
+- Reports matchup rates by archetype, round, Day 2 contention, and opponent field.
 - Produces reusable Matplotlib visualizations for tournament and metagame analysis.
 
 ## Data pipeline
@@ -77,6 +79,9 @@ The pipeline creates the SQLite database when needed, synchronizes tournament da
 
 The SQLite database is created at `database/pokemon.db`.
 
+Pairings are stored in `database/pairings.db` and enriched matchup records are
+stored in the `matchup_records` table.
+
 The main tables are:
 
 | Table | Purpose |
@@ -105,6 +110,18 @@ The current user-facing visualization roadmap is complete through Top Cut
 Conversion. Variant Compare was intentionally removed because it overlapped
 too closely with the existing Metagame Variant Breakdown visualization.
 
+Matchup reports can be run from the repository root:
+
+```bash
+python run_matchup_report.py --tournament-id TU01w1D52rjGebrE8szS --archetype Dragapult --opponent Alakazam
+python run_field_performance.py --tournament-id TU01w1D52rjGebrE8szS
+python run_round_performance.py --tournament-id TU01w1D52rjGebrE8szS --archetype Dragapult
+```
+
+The round-performance report shows each archetype's games, wins, losses,
+ties, and decisive win rate by round. Use `--day-2-filter yes` or
+`--day-2-filter no` to isolate the Day 2 contention breakdown.
+
 Visualization scripts are in [src/visualizations/](src/visualizations). Shared dimensions, colors, typography, and export behavior are maintained in [src/visualizations/chart_style.py](src/visualizations/chart_style.py).
 
 Generated charts are written under `src/visualizations/output/visualizations/` by the visualization scripts.
@@ -121,15 +138,15 @@ For visualization changes, run the relevant script and inspect the rendered imag
 
 ## Project status
 
-The scraper, database, classification system, analytics foundation, and
-user-facing visualization library are in place. The next development phase is:
+The scraper, database, classification system, analytics foundation, matchup
+data layer, and user-facing visualization library are in place. The current
+development phase is:
 
-1. Ingest the remaining tournaments.
-2. Update and validate the tournament and set metadata spreadsheets.
-3. Add and validate pairings data.
+1. Finish and validate the matchup analytics programs.
+2. Build matchup visualizations after the analytics definitions are stable.
+3. Continue improving ingestion automation and runtime efficiency.
 
-The public interface remains a later phase. Pairings and round-by-round
-analytics begin after the broader tournament dataset and metadata are updated.
+The public interface remains a later phase.
 
 Actual card images remain deferred until a reliable card-image source is
 available.

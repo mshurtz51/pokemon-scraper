@@ -14,6 +14,12 @@ from src.database import (
 from src.models import Player, Deck
 from src.roster import parse_roster
 from src.scraper import parse_all_decks
+from src.pairings import resolve_player, scrape_tournament_pairings
+from src.pairing_database import (
+    create_pairing_database,
+    insert_pairing_matches,
+    tournament_pairings_exist,
+)
 
 
 def _stored_decks(tournament_id):
@@ -84,12 +90,75 @@ def _tournament_counts(tournament_id):
     return row
 
 
+def _stored_roster(tournament_id):
+    """Load the stored roster in the shape used by pairing resolution."""
+    conn = get_connection()
+    rows = conn.execute(
+        """
+        SELECT player_key, first_name, last_name, country, division
+        FROM players
+        WHERE tournament_id = ?
+        ORDER BY player_key
+        """,
+        (tournament_id,),
+    ).fetchall()
+    conn.close()
+
+    return [
+        {
+            "player_key": row[0],
+            "first_name": row[1],
+            "last_name": row[2],
+            "country": row[3] or "",
+            "division": row[4],
+        }
+        for row in rows
+    ]
+
+
+def sync_pairings(tournament_id):
+    """Import all currently published RK9 pairings for one tournament."""
+    if tournament_pairings_exist(tournament_id):
+        print("  Pairings already synchronized")
+        return
+
+    matches = scrape_tournament_pairings(tournament_id)
+    roster = _stored_roster(tournament_id)
+    roster_by_division = {}
+    for player in roster:
+        roster_by_division.setdefault(player["division"], []).append(player)
+
+    resolutions = {}
+    resolution_counts = {"exact": 0, "ambiguous": 0, "unmatched": 0}
+    for match in matches:
+        division_roster = roster_by_division.get(match.division, [])
+        for side, player in (
+            ("player1", match.player1),
+            ("player2", match.player2),
+        ):
+            if player is None:
+                continue
+            resolution = resolve_player(player, division_roster)
+            resolutions[(match.match_key, side)] = resolution
+            resolution_counts[resolution.status] += 1
+
+    insert_pairing_matches(matches, resolutions)
+    print(f"  Pairings : {len(matches)} matches")
+    print(
+        "  Pairing player resolutions: "
+        f"{resolution_counts['exact']} exact, "
+        f"{resolution_counts['ambiguous']} ambiguous, "
+        f"{resolution_counts['unmatched']} unmatched"
+    )
+
+
 def sync_database():
     """
     Synchronize the SQLite database with metadata.xlsx.
     """
 
     tournaments = load_tournaments()
+    create_pairing_database()
 
     print()
     print("=" * 60)
@@ -105,6 +174,7 @@ def sync_database():
             stored_decks, parsed_cards = _tournament_counts(tournament_id)
             if stored_decks and stored_decks == parsed_cards:
                 print(f"[OK] {tournament_name} already imported")
+                sync_pairings(tournament_id)
                 print()
                 continue
 
@@ -131,6 +201,11 @@ def sync_database():
             insert_decks(decks)
             print("  Players inserted")
             print("  Decks inserted")
+
+        # Pairings depend on the roster identity and division, not on card
+        # parsing. Store them now so a later card-parser retry does not leave
+        # the tournament without its round data.
+        sync_pairings(tournament_id)
 
         completed_players = _completed_card_players(tournament_id)
         remaining = len(players) - len(completed_players)

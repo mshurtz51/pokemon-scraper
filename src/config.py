@@ -24,6 +24,7 @@ EXPORT_FOLDER.mkdir(exist_ok=True)
 
 # SQLite database
 DATABASE_NAME = DATABASE_FOLDER / "pokemon.db"
+PAIRING_DATABASE_NAME = DATABASE_FOLDER / "pairings.db"
 
 # HTTP request headers
 HEADERS = {
