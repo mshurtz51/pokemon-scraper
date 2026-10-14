@@ -83,6 +83,10 @@ are reviewed. Matchup `win_rate` uses match-point weighting, with ties worth
 one third of a win; `decisive_win_rate` remains available for comparisons that
 exclude ties.
 
+Card-level matchup analysis now joins selected directed matchups to the
+stored deck-card lists and compares each card's with-card and without-card
+match-point win rates.
+
 Round-level archetype and variant field composition now uses the stored Day 2
 contention flags. The survival report additionally compares each group's
 round-by-round conversion with the field-wide conversion baseline.

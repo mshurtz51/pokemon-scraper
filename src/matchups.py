@@ -1325,6 +1325,133 @@ def get_archetype_field_performance(
     ).reset_index(drop=True)
 
 
+def get_card_matchup_performance(
+    tournament_id: str,
+    archetype: str,
+    opponent: str,
+    division: str = "Masters",
+    use_variants: bool = False,
+) -> pd.DataFrame:
+    """Compare card-level results inside one directed archetype matchup.
+
+    Each selected-archetype player contributes one directed result per game.
+    For every card found in those deck lists, the report compares games where
+    the card was present with games where it was absent. Win rates use the
+    project's match-point convention, so ties contribute one third of a win.
+    """
+
+    records = get_matchup_records(tournament_id, division)
+    if records.empty:
+        return pd.DataFrame()
+
+    label1 = "player1_variant" if use_variants else "player1_overall"
+    label2 = "player2_variant" if use_variants else "player2_overall"
+    directed_rows = []
+    for _, record in records.iterrows():
+        if record[label1] == archetype and record[label2] == opponent:
+            directed_rows.append(
+                {
+                    "player_key": record["player1_key"],
+                    "match_result": record["match_result"],
+                    "wins": int(record["match_result"] == "player1_win"),
+                    "losses": int(record["match_result"] == "player2_win"),
+                }
+            )
+        if record[label2] == archetype and record[label1] == opponent:
+            directed_rows.append(
+                {
+                    "player_key": record["player2_key"],
+                    "match_result": record["match_result"],
+                    "wins": int(record["match_result"] == "player2_win"),
+                    "losses": int(record["match_result"] == "player1_win"),
+                }
+            )
+
+    directed = pd.DataFrame(directed_rows)
+    if directed.empty:
+        return pd.DataFrame()
+    directed = directed[directed["match_result"] != "unknown"].copy()
+    if directed.empty:
+        return pd.DataFrame()
+    directed["ties"] = (
+        directed["match_result"] == "tie_or_unknown"
+    ).astype(int)
+
+    conn = sqlite3.connect(str(DATABASE_NAME))
+    player_keys = directed["player_key"].dropna().unique().tolist()
+    placeholders = ", ".join("?" for _ in player_keys)
+    cards = pd.read_sql_query(
+        f"""
+        SELECT player_key, card_name, quantity
+        FROM deck_cards
+        WHERE player_key IN ({placeholders})
+        """,
+        conn,
+        params=player_keys,
+    )
+    conn.close()
+    if cards.empty:
+        return pd.DataFrame()
+
+    card_sets = (
+        cards.groupby("player_key")["card_name"]
+        .apply(set)
+        .to_dict()
+    )
+    card_names = sorted(cards["card_name"].dropna().unique())
+    rows = []
+    for card_name in card_names:
+        present = directed["player_key"].map(
+            lambda player_key: card_name in card_sets.get(player_key, set())
+        )
+        card_rows = []
+        for is_present, label in ((True, "with_card"), (False, "without_card")):
+            subset = directed[present == is_present]
+            games = len(subset)
+            wins = int(subset["wins"].sum())
+            losses = int(subset["losses"].sum())
+            ties = int(subset["ties"].sum())
+            win_rate = (
+                (wins + ties / 3) / games
+                if games
+                else None
+            )
+            card_rows.append((label, games, wins, losses, ties, win_rate))
+
+        with_card, without_card = card_rows
+        rows.append(
+            {
+                "card_name": card_name,
+                "players_with_card": int(
+                    sum(card_name in card_sets.get(key, set()) for key in player_keys)
+                ),
+                "games_with_card": with_card[1],
+                "wins_with_card": with_card[2],
+                "losses_with_card": with_card[3],
+                "ties_with_card": with_card[4],
+                "win_rate_with_card": with_card[5],
+                "games_without_card": without_card[1],
+                "wins_without_card": without_card[2],
+                "losses_without_card": without_card[3],
+                "ties_without_card": without_card[4],
+                "win_rate_without_card": without_card[5],
+            }
+        )
+
+    report = pd.DataFrame(rows)
+    report["win_rate_delta"] = (
+        report["win_rate_with_card"] - report["win_rate_without_card"]
+    )
+    report["archetype"] = archetype
+    report["opponent"] = opponent
+    report["grouping"] = "variant" if use_variants else "archetype"
+    return report.sort_values(
+        ["win_rate_delta", "games_with_card", "card_name"],
+        ascending=[False, False, True],
+        na_position="last",
+    ).reset_index(drop=True)
+
+
 def get_day_two_meta_share(
     tournament_id: str,
     division: str = "Masters",

@@ -146,6 +146,16 @@ python run_day_two_survival.py --tournament-id TU01w1D52rjGebrE8szS --archetype 
 python run_day_two_survival.py --tournament-id TU01w1D52rjGebrE8szS --round 8
 ```
 
+Card-level matchup performance can be inspected for a selected directed
+archetype matchup:
+
+```bash
+python run_card_matchup_report.py --tournament-id TU01w1D52rjGebrE8szS --archetype Crustle --opponent Dragapult
+```
+
+The report compares each card's results when present in the selected
+archetype's deck versus when absent, using the stored deck-card lists.
+
 Matchup `win_rate` uses the tournament scoring convention: a win contributes
 three points, a tie contributes one point, and a loss contributes zero.
 Therefore, `win_rate` is `(wins * 3 + ties) / (games * 3)`. Reports also
