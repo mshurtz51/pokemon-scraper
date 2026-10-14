@@ -1453,18 +1453,20 @@ def get_card_matchup_performance(
 
 
 def get_tech_card_matchup_analysis(
-    tournament_id: str,
+    tournament_id: str | None,
     archetype: str,
     card_name: str,
     division: str = "Masters",
     use_variants: bool = False,
 ) -> pd.DataFrame:
-    """Return matchup results for selected decks that contain one card.
+    """Return matchup results for one archetype and selected card.
 
     Results are grouped by opponent archetype or variant and compare games
     from deck lists that contain ``card_name`` with games from deck lists that
-    do not. Both sides include match-point win rate, tie rate, and decisive
-    win rate.
+    do not. When ``use_variants`` is true, ``archetype`` matches an overall
+    archetype when possible, allowing all of its variants to be analyzed
+    together. If it matches only a variant label, that variant is selected.
+    Both sides include match-point win rate, tie rate, and decisive win rate.
     """
 
     records = get_matchup_records(tournament_id, division)
@@ -1473,9 +1475,25 @@ def get_tech_card_matchup_analysis(
 
     label1 = "player1_variant" if use_variants else "player1_overall"
     label2 = "player2_variant" if use_variants else "player2_overall"
+    overall_labels = {
+        value
+        for value in pd.concat(
+            [records["player1_overall"], records["player2_overall"]]
+        ).dropna()
+    }
+
+    def is_selected(record: pd.Series, side: int) -> bool:
+        overall = record[f"player{side}_overall"]
+        selected_label = record[
+            f"player{side}_{'variant' if use_variants else 'overall'}"
+        ]
+        if use_variants and archetype in overall_labels:
+            return overall == archetype
+        return selected_label == archetype
+
     directed_rows = []
     for _, record in records.iterrows():
-        if record[label1] == archetype:
+        if is_selected(record, 1):
             directed_rows.append(
                 {
                     "player_key": record["player1_key"],
@@ -1485,7 +1503,7 @@ def get_tech_card_matchup_analysis(
                     "losses": int(record["match_result"] == "player2_win"),
                 }
             )
-        if record[label2] == archetype:
+        if is_selected(record, 2):
             directed_rows.append(
                 {
                     "player_key": record["player2_key"],

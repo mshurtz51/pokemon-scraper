@@ -11,7 +11,10 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Analyze matchups for decks containing one selected card."
     )
-    parser.add_argument("--tournament-id", required=True)
+    parser.add_argument(
+        "--tournament-id",
+        help="Limit the report to one tournament; omit for all tournaments.",
+    )
     parser.add_argument("--archetype", required=True)
     parser.add_argument("--card", required=True)
     parser.add_argument("--division", default="Masters")
