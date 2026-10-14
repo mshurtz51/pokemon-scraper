@@ -44,6 +44,11 @@ def main() -> None:
                     lambda value: f"{value:.3f}" if value == value else "-"
                 )
                 continue
+            if column == "match_point_delta_per_100_games":
+                frame[column] = frame[column].map(
+                    lambda value: f"{value:.1f}" if value == value else "-"
+                )
+                continue
             if column == "tech_value_above_replacement":
                 frame[column] = frame[column].map(format_percent)
                 continue

@@ -177,11 +177,14 @@ The command also prints a `TOTAL` row calculated from all games rather than
 averaging opponent rows.
 
 The tech-card value report adds a field-weighted replacement estimate,
-round-by-round card exposure, and opponent exposure by round. Its
+round-by-round card exposure, opponent exposure by round, and tournament-wide
+meta share by round. Its
 `tech_value_above_replacement` is the field-weighted win-rate difference
 between focal decks with and without the card. `match_point_delta_per_game`
-converts that difference into tournament match points per game. These are
-descriptive estimates, not causal claims.
+converts that difference into tournament match points per game, while
+`match_point_delta_per_100_games` provides a WAR-like scale for comparison.
+These are descriptive estimates, not causal claims, and do not assign a
+literal deck-slot cost.
 
 Matchup `win_rate` uses the tournament scoring convention: a win contributes
 three points, a tie contributes one point, and a loss contributes zero.

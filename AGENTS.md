@@ -354,6 +354,13 @@ Tech-card matchup analysis measures the selected archetype's results against
 opponents whose deck contains or does not contain the selected card. Use the
 exact archetype-plus-variant filter when a single focal variant is required.
 
+Tech-card value analysis evaluates a card in the selected archetype's own
+deck. It includes historical with/without results, field-weighted matchup
+value, round-level exposure, opponent exposure, and tournament-wide
+round-level meta share. `match_point_delta_per_100_games` is a readable
+WAR-like comparison metric, but it is descriptive and does not claim a causal
+deck-slot value.
+
 ## Notion Project Management
 
 The connected Notion project page is the source of truth for project-management context, including priorities, roadmap, milestones, decisions, and status. The actual repository code is the implementation source of truth.

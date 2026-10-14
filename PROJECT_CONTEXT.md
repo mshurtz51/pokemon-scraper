@@ -93,10 +93,13 @@ archetypes whose deck contains or does not contain that card. Exact focal
 variant selection is supported with the archetype-plus-variant filter.
 
 Tech-card value analysis extends this with a field-weighted replacement
-estimate, round-by-round card exposure, and opponent exposure by round. The
-replacement estimate is descriptive: it weights with-card and without-card
-matchup rates by the selected archetype's observed opponent field and reports
-the difference in match-point percentage per game.
+estimate, round-by-round card exposure, opponent exposure by round, and
+tournament-wide meta share by round. The replacement estimate is descriptive:
+it weights with-card and without-card matchup rates by the selected
+archetype's observed opponent field and reports the difference in match-point
+percentage per game. `match_point_delta_per_100_games` presents the same
+difference on a WAR-like comparison scale; it is not a causal estimate of a
+deck-slot replacement value.
 
 Round-level archetype and variant field composition now uses the stored Day 2
 contention flags. The survival report additionally compares each group's

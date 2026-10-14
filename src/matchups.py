@@ -1676,6 +1676,7 @@ def get_tech_card_value_analysis(
             "matchups": pd.DataFrame(),
             "rounds": pd.DataFrame(),
             "exposure": pd.DataFrame(),
+            "meta_share": pd.DataFrame(),
         }
 
     label1 = "player1_variant" if use_variants else "player1_overall"
@@ -1733,6 +1734,7 @@ def get_tech_card_value_analysis(
             "matchups": pd.DataFrame(),
             "rounds": pd.DataFrame(),
             "exposure": pd.DataFrame(),
+            "meta_share": pd.DataFrame(),
         }
     directed = directed[
         (directed["match_result"] != "unknown")
@@ -1745,6 +1747,7 @@ def get_tech_card_value_analysis(
             "matchups": pd.DataFrame(),
             "rounds": pd.DataFrame(),
             "exposure": pd.DataFrame(),
+            "meta_share": pd.DataFrame(),
         }
 
     conn = sqlite3.connect(str(DATABASE_NAME))
@@ -1914,6 +1917,7 @@ def get_tech_card_value_analysis(
                 "field_weighted_delta": weighted_with - weighted_without,
                 "tech_value_above_replacement": weighted_with - weighted_without,
                 "match_point_delta_per_game": (weighted_with - weighted_without) * 3,
+                "match_point_delta_per_100_games": (weighted_with - weighted_without) * 300,
             }
         ]
     )
@@ -1930,6 +1934,38 @@ def get_tech_card_value_analysis(
     exposure = exposure.merge(round_totals, on="round")
     exposure["opponent_field_share"] = exposure["games"] / exposure["round_games"]
     exposure["card_presence_rate"] = exposure["games_with_card"] / exposure["games"]
+
+    field_rows = []
+    for _, record in records.iterrows():
+        for side in (1, 2):
+            field_label = record[f"player{side}_{'variant' if use_variants else 'overall'}"]
+            player_key = record[f"player{side}_key"]
+            if pd.isna(field_label) or field_label == "Unknown" or pd.isna(player_key):
+                continue
+            field_rows.append(
+                {
+                    "tournament_id": record["tournament_id"],
+                    "round": int(record["round_number"]),
+                    "player_key": player_key,
+                    "group": field_label,
+                }
+            )
+    field = pd.DataFrame(field_rows).drop_duplicates(
+        subset=["tournament_id", "round", "player_key"]
+    )
+    meta_share = (
+        field.groupby(["round", "group"], as_index=False)
+        .agg(players=("player_key", "nunique"))
+    )
+    field_totals = field.groupby("round")["player_key"].nunique().rename("total_players")
+    meta_share = meta_share.merge(field_totals, on="round", how="left")
+    meta_share["meta_share"] = meta_share["players"] / meta_share["total_players"]
+    focal_field = (
+        directed.groupby("round")["player_key"].nunique().rename("focal_players")
+    )
+    meta_share = meta_share.merge(focal_field, on="round", how="left")
+    meta_share["archetype"] = archetype
+    meta_share["card_name"] = card_name
     return {
         "summary": summary,
         "matchups": report.sort_values(
@@ -1937,6 +1973,9 @@ def get_tech_card_value_analysis(
         ).reset_index(drop=True),
         "rounds": rounds.sort_values("round").reset_index(drop=True),
         "exposure": exposure.sort_values(["round", "games"], ascending=[True, False]).reset_index(drop=True),
+        "meta_share": meta_share.sort_values(
+            ["round", "meta_share", "group"], ascending=[True, False, True]
+        ).reset_index(drop=True),
     }
 
 
