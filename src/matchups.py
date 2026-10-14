@@ -47,6 +47,9 @@ SOURCE_COLUMNS = """
         WHEN m.player1_outcome = 'loss'
             AND m.player2_outcome = 'win'
             THEN 'player2_win'
+        WHEN m.player1_outcome = 'loss'
+            AND m.player2_outcome = 'loss'
+            THEN 'unknown'
         ELSE 'tie_or_unknown'
     END AS match_result
 """
@@ -118,7 +121,15 @@ def _match_result(player1_outcome: str | None, player2_outcome: str | None) -> s
         return "player1_win"
     if player1_outcome == "loss" and player2_outcome == "win":
         return "player2_win"
+    if player1_outcome == "loss" and player2_outcome == "loss":
+        return "unknown"
     return "tie_or_unknown"
+
+
+def _count_ties(results: pd.Series) -> int:
+    """Count explicit tie results without crediting unknown outcomes."""
+
+    return int((results == "tie_or_unknown").sum())
 
 
 def _add_win_rates(
@@ -522,10 +533,8 @@ def get_archetype_matchup_trends(
             games=("match_result", "count"),
             wins=("wins", "sum"),
             losses=("losses", "sum"),
+            ties_or_unknown=("match_result", _count_ties),
         )
-    )
-    summary["ties_or_unknown"] = (
-        summary["games"] - summary["wins"] - summary["losses"]
     )
     _add_win_rates(summary)
     return summary.sort_values(
@@ -631,10 +640,8 @@ def get_multi_tournament_matchup_summary(
             games=("match_result", "count"),
             wins=("wins", "sum"),
             losses=("losses", "sum"),
+            ties_or_unknown=("match_result", _count_ties),
         )
-    )
-    summary["ties_or_unknown"] = (
-        summary["games"] - summary["wins"] - summary["losses"]
     )
     _add_win_rates(summary)
     return summary.sort_values(
@@ -709,10 +716,8 @@ def get_matchup_strength_cohorts(
             games=("match_result", "count"),
             wins=("wins", "sum"),
             losses=("losses", "sum"),
+            ties_or_unknown=("match_result", _count_ties),
         )
-    )
-    summary["ties_or_unknown"] = (
-        summary["games"] - summary["wins"] - summary["losses"]
     )
     _add_win_rates(summary)
     summary["matchup"] = (
@@ -902,10 +907,8 @@ def get_matchup_round_cohorts(
             games=("match_result", "count"),
             wins=("wins", "sum"),
             losses=("losses", "sum"),
+            ties_or_unknown=("match_result", _count_ties),
         )
-    )
-    summary["ties_or_unknown"] = (
-        summary["games"] - summary["wins"] - summary["losses"]
     )
     _add_win_rates(summary)
     summary["matchup"] = (
@@ -921,12 +924,8 @@ def get_matchup_round_cohorts(
                 games=("match_result", "count"),
                 wins=("wins", "sum"),
                 losses=("losses", "sum"),
+                ties_or_unknown=("match_result", _count_ties),
             )
-        )
-        all_summary["ties_or_unknown"] = (
-            all_summary["games"]
-            - all_summary["wins"]
-            - all_summary["losses"]
         )
         _add_win_rates(all_summary)
         all_summary["day_2_contention"] = "all"
@@ -1074,10 +1073,8 @@ def get_archetype_field_performance(
             games=("match_result", "count"),
             wins=("wins", "sum"),
             losses=("losses", "sum"),
+            ties_or_unknown=("match_result", _count_ties),
         )
-    )
-    summary["ties_or_unknown"] = (
-        summary["games"] - summary["wins"] - summary["losses"]
     )
     _add_win_rates(summary)
     return summary.sort_values(
@@ -1168,10 +1165,8 @@ def get_archetype_round_performance(
             games=("match_result", "count"),
             wins=("wins", "sum"),
             losses=("losses", "sum"),
+            ties_or_unknown=("match_result", _count_ties),
         )
-    )
-    summary["ties_or_unknown"] = (
-        summary["games"] - summary["wins"] - summary["losses"]
     )
     _add_win_rates(summary)
     summary["day_2_contention"] = summary["day_2_contender"].map(
@@ -1185,12 +1180,8 @@ def get_archetype_round_performance(
                 games=("match_result", "count"),
                 wins=("wins", "sum"),
                 losses=("losses", "sum"),
+                ties_or_unknown=("match_result", _count_ties),
             )
-        )
-        all_summary["ties_or_unknown"] = (
-            all_summary["games"]
-            - all_summary["wins"]
-            - all_summary["losses"]
         )
         _add_win_rates(all_summary)
         all_summary["day_2_contention"] = "all"
