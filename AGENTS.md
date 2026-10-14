@@ -373,7 +373,9 @@ Active project decisions include:
 
 Notion and the repository currently have a documented synchronization discrepancy. The Notion project page says Archetype Comparison is complete and Average Finish is next, while the Notion visualization task records all show `Not Started`. The repository contains four user-facing visualization implementations and treats Card Inclusion as the next item. Notion calls the existing `average_finish.py` work “Average Finish,” while repository documentation calls its output “Finish Distribution.” Do not silently reorder or relabel the roadmap; report the discrepancy and ask for direction when it affects implementation.
 
-Keep QA/development tasks such as `meta_share_qa.py` separate from the user-facing visualization roadmap and count. The future “Made Day 2” metric remains deferred until RK9 matchup/round data exists; PI Top 512 is currently a proxy.
+Keep QA/development tasks such as `meta_share_qa.py` separate from the
+user-facing visualization roadmap and count. Made Day 2 is now sourced from
+RK9 pairing data; true Top 512 finish metrics remain separate analytics.
 
 ## Assets
 

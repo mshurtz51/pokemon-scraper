@@ -393,7 +393,9 @@ expected Top 64 players.
 
 A PI Top 64 around 2.90x means roughly 2.90 times expected representation, not 290% meta share.
 
-A future iteration may add `Made Day 2` after RK9 matchup/pairing data becomes available.
+`Made Day 2` is now sourced from RK9 pairing data using the tournament's
+phase-one match-point threshold. Per-round records also store whether each
+player was still in Day 2 contention before the match.
 
 ### 12.4 Finish Distribution
 
@@ -591,9 +593,9 @@ user-facing visualizations exist. Do not resolve this discrepancy by guessing;
 use the repository for implementation status and Notion for approved project
 priorities until the task records are deliberately updated.
 
-Notion also records that a future “Made Day 2” metric should be added only
-after RK9 matchup/round data is available. PI Top 512 is currently a temporary
-proxy for that metric.
+The Day 2 metric is now sourced from RK9 pairing data. A queued report will
+show round-level archetype and variant field composition among players still
+in Day 2 contention; PI Top 512 remains a separate true finish metric.
 
 ## 17. Git Workflow
 
