@@ -126,6 +126,11 @@ The multi-tournament matchup report aggregates directed archetype matchups
 across all stored tournaments, or across selected tournaments when
 `--tournament-id` is repeated.
 
+Matchup `win_rate` uses the tournament scoring convention: a win contributes
+three points, a tie contributes one point, and a loss contributes zero.
+Therefore, `win_rate` is `(wins * 3 + ties) / (games * 3)`. Reports also
+retain `decisive_win_rate`, which excludes ties from its denominator.
+
 Visualization scripts are in [src/visualizations/](src/visualizations). Shared dimensions, colors, typography, and export behavior are maintained in [src/visualizations/chart_style.py](src/visualizations/chart_style.py).
 
 Generated charts are written under `src/visualizations/output/visualizations/` by the visualization scripts.

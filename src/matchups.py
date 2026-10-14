@@ -121,6 +121,24 @@ def _match_result(player1_outcome: str | None, player2_outcome: str | None) -> s
     return "tie_or_unknown"
 
 
+def _add_win_rates(
+    summary: pd.DataFrame,
+    wins_column: str = "wins",
+    games_column: str = "games",
+    ties_column: str = "ties_or_unknown",
+) -> pd.DataFrame:
+    """Add match-point and decisive-game win rates to an aggregate frame."""
+
+    summary["decisive_games"] = summary[wins_column] + summary["losses"]
+    summary["decisive_win_rate"] = summary[wins_column] / summary[
+        "decisive_games"
+    ].where(summary["decisive_games"] > 0)
+    summary["win_rate"] = (
+        summary[wins_column] + summary[ties_column] / 3
+    ) / summary[games_column].where(summary[games_column] > 0)
+    return summary
+
+
 def _points_before(
     points_after: int | None,
     outcome: str | None,
@@ -340,6 +358,8 @@ def summarize_archetype_matchups(
                 "is_mirror",
                 "a_win_rate",
                 "b_win_rate",
+                "a_decisive_win_rate",
+                "b_decisive_win_rate",
             ]
         )
 
@@ -369,9 +389,23 @@ def summarize_archetype_matchups(
     summary["decisive_games"] = summary["a_wins"] + summary["b_wins"]
     summary["is_mirror"] = summary["archetype_a"] == summary["archetype_b"]
     decisive = summary["decisive_games"].where(summary["decisive_games"] > 0)
-    summary["a_win_rate"] = summary["a_wins"] / decisive
-    summary["b_win_rate"] = summary["b_wins"] / decisive
-    summary.loc[summary["is_mirror"], ["a_win_rate", "b_win_rate"]] = pd.NA
+    summary["a_decisive_win_rate"] = summary["a_wins"] / decisive
+    summary["b_decisive_win_rate"] = summary["b_wins"] / decisive
+    summary["a_win_rate"] = (
+        summary["a_wins"] + summary["ties_or_unknown"] / 3
+    ) / summary["games"].where(summary["games"] > 0)
+    summary["b_win_rate"] = (
+        summary["b_wins"] + summary["ties_or_unknown"] / 3
+    ) / summary["games"].where(summary["games"] > 0)
+    summary.loc[
+        summary["is_mirror"],
+        [
+            "a_win_rate",
+            "b_win_rate",
+            "a_decisive_win_rate",
+            "b_decisive_win_rate",
+        ],
+    ] = pd.NA
     return summary.sort_values(["games", "archetype_a", "archetype_b"], ascending=[False, True, True])
 
 
@@ -384,9 +418,9 @@ def get_archetype_matchup_matrix(
     """Return a directed archetype win-rate matrix.
 
     Rows are the focal archetype and columns are opposing archetypes. Values
-    are decisive-game win rates, so ties and unknown outcomes are excluded
-    from each cell's denominator. Mirror cells represent the archetype's
-    combined win rate across both sides of the mirror.
+    are match-point-adjusted win rates, where a tie contributes one third of
+    a win. Mirror cells represent the archetype's combined win rate across
+    both sides of the mirror.
     """
 
     records = get_matchup_records(tournament_id, division)
@@ -409,12 +443,14 @@ def get_archetype_matchup_matrix(
             ).assign(
                 wins=lambda frame: (frame["match_result"] == "player1_win").astype(int),
                 losses=lambda frame: (frame["match_result"] == "player2_win").astype(int),
+                ties=lambda frame: (frame["match_result"] == "tie_or_unknown").astype(int),
             ),
             records[[label2, label1, "match_result"]].rename(
                 columns={label2: "archetype", label1: "opponent"}
             ).assign(
                 wins=lambda frame: (frame["match_result"] == "player2_win").astype(int),
                 losses=lambda frame: (frame["match_result"] == "player1_win").astype(int),
+                ties=lambda frame: (frame["match_result"] == "tie_or_unknown").astype(int),
             ),
         ],
         ignore_index=True,
@@ -422,13 +458,13 @@ def get_archetype_matchup_matrix(
     summary = (
         directed.groupby(["archetype", "opponent"], as_index=False)
         .agg(
+            games=("match_result", "count"),
             wins=("wins", "sum"),
             losses=("losses", "sum"),
+            ties_or_unknown=("ties", "sum"),
         )
     )
-    decisive = summary["wins"] + summary["losses"]
-    summary["games"] = decisive
-    summary["win_rate"] = summary["wins"] / decisive.where(decisive > 0)
+    _add_win_rates(summary)
     return summary.pivot(
         index="archetype",
         columns="opponent",
@@ -491,10 +527,7 @@ def get_archetype_matchup_trends(
     summary["ties_or_unknown"] = (
         summary["games"] - summary["wins"] - summary["losses"]
     )
-    summary["decisive_games"] = summary["wins"] + summary["losses"]
-    summary["win_rate"] = summary["wins"] / summary["decisive_games"].where(
-        summary["decisive_games"] > 0
-    )
+    _add_win_rates(summary)
     return summary.sort_values(
         ["tournament_id", "games", "archetype", "opponent"],
         ascending=[True, False, True, True],
@@ -513,8 +546,8 @@ def get_multi_tournament_matchup_summary(
 
     Each completed pairing contributes one directed result for each player.
     When ``tournament_ids`` is omitted, all tournaments in the pairing
-    database are included. Ties and unknown outcomes remain in ``games`` but
-    are excluded from the decisive-game win-rate denominator.
+    database are included. Ties remain in ``games`` and contribute one third
+    of a win to ``win_rate``; ``decisive_win_rate`` excludes them.
     """
 
     records = get_matchup_records(division=division)
@@ -603,10 +636,7 @@ def get_multi_tournament_matchup_summary(
     summary["ties_or_unknown"] = (
         summary["games"] - summary["wins"] - summary["losses"]
     )
-    summary["decisive_games"] = summary["wins"] + summary["losses"]
-    summary["win_rate"] = summary["wins"] / summary["decisive_games"].where(
-        summary["decisive_games"] > 0
-    )
+    _add_win_rates(summary)
     return summary.sort_values(
         ["games", "archetype", "opponent"],
         ascending=[False, True, True],
@@ -684,10 +714,7 @@ def get_matchup_strength_cohorts(
     summary["ties_or_unknown"] = (
         summary["games"] - summary["wins"] - summary["losses"]
     )
-    summary["decisive_games"] = summary["wins"] + summary["losses"]
-    summary["win_rate"] = summary["wins"] / summary["decisive_games"].where(
-        summary["decisive_games"] > 0
-    )
+    _add_win_rates(summary)
     summary["matchup"] = (
         summary["archetype"] + " vs " + summary["opponent"]
     )
@@ -880,10 +907,7 @@ def get_matchup_round_cohorts(
     summary["ties_or_unknown"] = (
         summary["games"] - summary["wins"] - summary["losses"]
     )
-    summary["decisive_games"] = summary["wins"] + summary["losses"]
-    summary["win_rate"] = summary["wins"] / summary["decisive_games"].where(
-        summary["decisive_games"] > 0
-    )
+    _add_win_rates(summary)
     summary["matchup"] = (
         summary["archetype"] + " vs " + summary["opponent"]
     )
@@ -904,12 +928,7 @@ def get_matchup_round_cohorts(
             - all_summary["wins"]
             - all_summary["losses"]
         )
-        all_summary["decisive_games"] = (
-            all_summary["wins"] + all_summary["losses"]
-        )
-        all_summary["win_rate"] = all_summary["wins"] / all_summary[
-            "decisive_games"
-        ].where(all_summary["decisive_games"] > 0)
+        _add_win_rates(all_summary)
         all_summary["day_2_contention"] = "all"
         all_summary["matchup"] = (
             all_summary["archetype"] + " vs " + all_summary["opponent"]
@@ -927,7 +946,7 @@ def get_matchup_round_cohorts(
 def get_matchup_round_matrix(
     **kwargs: object,
 ) -> pd.DataFrame:
-    """Return cumulative matchup win rates with rounds as the index."""
+    """Return round matchup win rates with rounds as the index."""
 
     cohorts = get_matchup_round_cohorts(**kwargs)
     if cohorts.empty:
@@ -935,12 +954,13 @@ def get_matchup_round_matrix(
     grouped = (
         cohorts.groupby(["round", "matchup"], as_index=False)
         .agg(
+            games=("games", "sum"),
             wins=("wins", "sum"),
             losses=("losses", "sum"),
+            ties_or_unknown=("ties_or_unknown", "sum"),
         )
     )
-    decisive = grouped["wins"] + grouped["losses"]
-    grouped["win_rate"] = grouped["wins"] / decisive.where(decisive > 0)
+    _add_win_rates(grouped)
     return grouped.pivot(
         index="round",
         columns="matchup",
@@ -966,10 +986,7 @@ def flatten_matchup_round_cohorts(cohorts: pd.DataFrame) -> pd.DataFrame:
             ties_or_unknown=("ties_or_unknown", "sum"),
         )
     )
-    totals["decisive_games"] = totals["wins"] + totals["losses"]
-    totals["win_rate"] = totals["wins"] / totals["decisive_games"].where(
-        totals["decisive_games"] > 0
-    )
+    _add_win_rates(totals)
     totals["round"] = "TOTAL"
     totals["matchup"] = totals["archetype"] + " vs " + totals["opponent"]
     return totals[
@@ -1062,10 +1079,7 @@ def get_archetype_field_performance(
     summary["ties_or_unknown"] = (
         summary["games"] - summary["wins"] - summary["losses"]
     )
-    summary["decisive_games"] = summary["wins"] + summary["losses"]
-    summary["win_rate"] = summary["wins"] / summary["decisive_games"].where(
-        summary["decisive_games"] > 0
-    )
+    _add_win_rates(summary)
     return summary.sort_values(
         ["win_rate", "games", "archetype"],
         ascending=[False, False, True],
@@ -1159,10 +1173,7 @@ def get_archetype_round_performance(
     summary["ties_or_unknown"] = (
         summary["games"] - summary["wins"] - summary["losses"]
     )
-    summary["decisive_games"] = summary["wins"] + summary["losses"]
-    summary["win_rate"] = summary["wins"] / summary["decisive_games"].where(
-        summary["decisive_games"] > 0
-    )
+    _add_win_rates(summary)
     summary["day_2_contention"] = summary["day_2_contender"].map(
         {True: "yes", False: "no"}
     ).fillna("not_applicable")
@@ -1181,12 +1192,7 @@ def get_archetype_round_performance(
             - all_summary["wins"]
             - all_summary["losses"]
         )
-        all_summary["decisive_games"] = (
-            all_summary["wins"] + all_summary["losses"]
-        )
-        all_summary["win_rate"] = all_summary["wins"] / all_summary[
-            "decisive_games"
-        ].where(all_summary["decisive_games"] > 0)
+        _add_win_rates(all_summary)
         all_summary["day_2_contention"] = "all"
         summary = pd.concat([summary, all_summary], ignore_index=True)
 
@@ -1200,10 +1206,7 @@ def get_archetype_round_performance(
             ties_or_unknown=("ties_or_unknown", "sum"),
         )
     )
-    totals["decisive_games"] = totals["wins"] + totals["losses"]
-    totals["win_rate"] = totals["wins"] / totals["decisive_games"].where(
-        totals["decisive_games"] > 0
-    )
+    _add_win_rates(totals)
     totals["round"] = "TOTAL"
     summary = pd.concat([summary, totals], ignore_index=True)
     summary["_status_order"] = summary["day_2_contention"].map(status_order)

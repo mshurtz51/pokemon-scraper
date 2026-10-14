@@ -79,7 +79,9 @@ trends, round-level matchup cohorts, Day 2 contention breakdowns, flattened
 tournament totals, archetype performance against the full field, overall
 archetype performance by round, and aggregated multi-tournament matchup
 summaries. Matchup visualizations remain planned after the analytics reports
-are reviewed.
+are reviewed. Matchup `win_rate` uses match-point weighting, with ties worth
+one third of a win; `decisive_win_rate` remains available for comparisons that
+exclude ties.
 
 ## 4. RK9 Scraper
 
