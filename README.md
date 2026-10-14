@@ -13,6 +13,7 @@ The project is currently focused on building a reliable data and visualization f
 - Calculates tournament metrics such as meta share, average finish, card inclusion, conversion, and performance index.
 - Ingests RK9 pairings into a separate SQLite database for matchup analysis.
 - Reports matchup rates by archetype, round, Day 2 contention, and opponent field.
+- Queues round-level archetype and variant field composition among Day 2 contenders.
 - Produces reusable Matplotlib visualizations for tournament and metagame analysis.
 
 ## Data pipeline
@@ -125,6 +126,10 @@ ties, and decisive win rate by round. Use `--day-2-filter yes` or
 The multi-tournament matchup report aggregates directed archetype matchups
 across all stored tournaments, or across selected tournaments when
 `--tournament-id` is repeated.
+
+The Day 2 field-composition report is queued next. It will use each round's
+stored contention flags to show how the archetype and variant mix among players
+still eligible for Day 2 differs from the full-tournament mix.
 
 Matchup `win_rate` uses the tournament scoring convention: a win contributes
 three points, a tie contributes one point, and a loss contributes zero.

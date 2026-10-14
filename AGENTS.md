@@ -267,6 +267,7 @@ Average Finish
 PI Top 64
 PI Top 128
 PI Top 512
+Made Day 2
 ```
 
 Users select 2–5 archetypes.
@@ -279,7 +280,9 @@ Performance Index:
 <1.00x = underrepresented
 ```
 
-A future version may add `Made Day 2` once RK9 matchup/pairing data exists.
+`Made Day 2` is populated from RK9 pairing data using the tournament's
+phase-one match-point threshold. Per-round pairing records also carry a Day 2
+contention flag for live-field analysis.
 
 ### Finish Distribution
 
@@ -333,6 +336,7 @@ Completed matchup programs include:
 - Flattened tournament totals for round-level matchup cohorts
 - Archetype performance against the full field
 - Multi-tournament matchup summaries
+- Round-level Day 2 field composition by archetype or variant (queued)
 
 The current matchup programs include single-tournament and aggregated
 multi-tournament reports. Use the existing report runners while the matchup

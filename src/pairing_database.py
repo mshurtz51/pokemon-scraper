@@ -39,6 +39,8 @@ def create_pairing_database() -> None:
             player1_key TEXT,
             player1_resolution TEXT,
             player1_candidates TEXT,
+            player1_day_2_contention INTEGER,
+            player1_day_2 INTEGER,
             player2_first_name TEXT,
             player2_last_name TEXT,
             player2_country TEXT,
@@ -47,10 +49,25 @@ def create_pairing_database() -> None:
             player2_outcome TEXT,
             player2_key TEXT,
             player2_resolution TEXT,
-            player2_candidates TEXT
+            player2_candidates TEXT,
+            player2_day_2_contention INTEGER,
+            player2_day_2 INTEGER
         )
         """
     )
+    existing_columns = {
+        row[1] for row in conn.execute("PRAGMA table_info(pairing_matches)")
+    }
+    for column in (
+        "player1_day_2_contention",
+        "player1_day_2",
+        "player2_day_2_contention",
+        "player2_day_2",
+    ):
+        if column not in existing_columns:
+            conn.execute(
+                f"ALTER TABLE pairing_matches ADD COLUMN {column} INTEGER"
+            )
     conn.commit()
     conn.close()
 
@@ -116,7 +133,11 @@ def insert_pairing_matches(
                 match.match_index,
                 match.status,
                 *_player_values(match.player1, p1_resolution),
+                None,
+                None,
                 *_player_values(match.player2, p2_resolution),
+                None,
+                None,
             )
         )
 
@@ -129,10 +150,12 @@ def insert_pairing_matches(
             player1_first_name, player1_last_name, player1_country,
             player1_record, player1_points, player1_outcome, player1_key,
             player1_resolution, player1_candidates,
+            player1_day_2_contention, player1_day_2,
             player2_first_name, player2_last_name, player2_country,
             player2_record, player2_points, player2_outcome, player2_key,
-            player2_resolution, player2_candidates
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            player2_resolution, player2_candidates,
+            player2_day_2_contention, player2_day_2
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         rows,
     )

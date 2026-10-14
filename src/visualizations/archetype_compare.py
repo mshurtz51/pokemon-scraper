@@ -5,6 +5,7 @@ Compares selected archetypes within one tournament across:
 - Players
 - Meta Share
 - Average Finish
+- Day 2 Rate
 - Performance Index at Top 64, Top 128, and Top 512
 
 The visualization uses a clean comparison table with conditional
@@ -226,6 +227,10 @@ def build_report(
                 * 100,
             "Average Finish":
                 deck_df["standing"].mean(),
+            "Day 2 Rate":
+                pd.to_numeric(deck_df["day_2"], errors="coerce")
+                .mean()
+                * 100,
         }
 
         previous_cut = 0
@@ -516,6 +521,7 @@ def draw_comparison(
         "Players",
         "Meta Share",
         "Average Finish",
+        "Day 2 Rate",
         "PI Top 64",
         "PI Top 128",
         "PI Top 512",
@@ -526,6 +532,7 @@ def draw_comparison(
         0.10,
         0.12,
         0.14,
+        0.12,
         0.133,
         0.133,
         0.133,
@@ -603,6 +610,9 @@ def draw_comparison(
     finish_min = report["Average Finish"].min()
     finish_max = report["Average Finish"].max()
 
+    day_two_min = report["Day 2 Rate"].min()
+    day_two_max = report["Day 2 Rate"].max()
+
     pi_columns = [
         "PI Top 64",
         "PI Top 128",
@@ -632,6 +642,7 @@ def draw_comparison(
             f"{row['Players']:.0f}",
             f"{row['Meta Share']:.1f}%",
             f"{row['Average Finish']:.0f}",
+            f"{row['Day 2 Rate']:.1f}%",
             f"{row['PI Top 64']:.2f}x",
             f"{row['PI Top 128']:.2f}x",
             f"{row['PI Top 512']:.2f}x",
@@ -666,11 +677,18 @@ def draw_comparison(
                     finish_max,
                 )
 
-            elif column_index >= 4:
+            elif column_index == 4:
+                facecolor = heatmap_color(
+                    row["Day 2 Rate"],
+                    day_two_min,
+                    day_two_max,
+                )
+
+            elif column_index >= 5:
                 facecolor = pi_color(
                     row[
                         pi_columns[
-                            column_index - 4
+                            column_index - 5
                         ]
                     ]
                 )
@@ -757,7 +775,8 @@ def draw_comparison(
 
     pi_note_4 = (
         "Cumulative includes all finishes through each cut; "
-        "Actual measures only finishes within that cut range."
+        "Actual measures only finishes within that cut range. Day 2 Rate "
+        "is the share reaching the tournament's Day 2 threshold."
     )
 
     fig.text(
@@ -898,6 +917,8 @@ def main():
                     "{:.1f}%".format,
                 "Average Finish":
                     "{:.0f}".format,
+                "Day 2 Rate":
+                    "{:.1f}%".format,
                 "PI Top 64":
                     "{:.2f}x".format,
                 "PI Top 128":

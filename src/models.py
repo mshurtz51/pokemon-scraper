@@ -18,6 +18,8 @@ class Player:
 
     standing: int | None
 
+    day_2: int | None = None
+
 
 @dataclass
 class Deck:

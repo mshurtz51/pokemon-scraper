@@ -76,7 +76,8 @@ def get_classified_players(tournament_id):
             overall,
             variant,
             matched,
-            score
+            score,
+            day_2
 
         FROM players
 
@@ -122,7 +123,8 @@ def get_tournament_results(tournament_id):
             country,
             standing,
             overall,
-            variant
+            variant,
+            day_2
 
         FROM players
 
@@ -165,7 +167,8 @@ def get_archetype_summary(tournament_id):
             player_key,
             standing,
             overall,
-            variant
+            variant,
+            day_2
 
         FROM players
 
@@ -210,7 +213,8 @@ def get_all_tournament_results():
             tournament_id,
             standing,
             overall,
-            variant
+            variant,
+            day_2
 
         FROM players
 
@@ -256,6 +260,7 @@ def get_archetype_cards(tournament_id):
             p.standing,
             p.overall,
             p.variant,
+            p.day_2,
 
             dc.card_name,
             dc.card_type,
@@ -276,6 +281,7 @@ def get_archetype_cards(tournament_id):
 
             p.overall,
             p.variant,
+            p.day_2,
             dc.card_type,
             dc.card_name
     """
@@ -356,6 +362,7 @@ def get_archetype_card_performance(tournament_id):
             p.standing,
             p.overall,
             p.variant,
+            p.day_2,
 
             dc.card_name,
             dc.quantity

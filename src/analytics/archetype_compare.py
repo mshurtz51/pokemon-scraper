@@ -185,6 +185,10 @@ def main():
                 * 100,
             "Average Finish":
                 deck_df["standing"].mean(),
+            "Day 2 Rate":
+                pd.to_numeric(deck_df["day_2"], errors="coerce")
+                .mean()
+                * 100,
         }
 
         previous_cut = 0
@@ -263,6 +267,8 @@ def main():
                     "{:.1f}%".format,
                 "Average Finish":
                     "{:.0f}".format,
+                "Day 2 Rate":
+                    "{:.1f}%".format,
                 "PI Top 64":
                     "{:.2f}x".format,
                 "PI Top 128":

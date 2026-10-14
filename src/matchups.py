@@ -7,6 +7,7 @@ import sqlite3
 import pandas as pd
 
 from src.config import DATABASE_NAME, PAIRING_DATABASE_NAME
+from src.pairing_database import create_pairing_database
 
 
 MATCHUP_COLUMNS = (
@@ -15,7 +16,9 @@ MATCHUP_COLUMNS = (
     "player1_outcome, player2_outcome, player1_record, player2_record, "
     "player1_points_after, player2_points_after, player1_points_before, "
     "player2_points_before, player1_overall, player1_variant, player2_overall, "
-    "player2_variant, match_result, eligible_for_analytics"
+    "player2_variant, player1_day_2_contention, player1_day_2, "
+    "player2_day_2_contention, player2_day_2, match_result, "
+    "eligible_for_analytics"
 )
 
 SOURCE_COLUMNS = """
@@ -40,6 +43,10 @@ SOURCE_COLUMNS = """
     p1.variant,
     p2.overall,
     p2.variant,
+    m.player1_day_2_contention,
+    m.player1_day_2,
+    m.player2_day_2_contention,
+    m.player2_day_2,
     CASE
         WHEN m.player1_outcome = 'win'
             AND m.player2_outcome = 'loss'
@@ -91,6 +98,10 @@ def create_matchup_table() -> None:
             player1_variant TEXT,
             player2_overall TEXT,
             player2_variant TEXT,
+            player1_day_2_contention INTEGER,
+            player1_day_2 INTEGER,
+            player2_day_2_contention INTEGER,
+            player2_day_2 INTEGER,
             match_result TEXT NOT NULL,
             eligible_for_analytics INTEGER NOT NULL
         )
@@ -106,6 +117,10 @@ def create_matchup_table() -> None:
         "player2_points_after": "INTEGER",
         "player1_points_before": "INTEGER",
         "player2_points_before": "INTEGER",
+        "player1_day_2_contention": "INTEGER",
+        "player1_day_2": "INTEGER",
+        "player2_day_2_contention": "INTEGER",
+        "player2_day_2": "INTEGER",
     }
     for column, data_type in new_columns.items():
         if column not in existing_columns:
@@ -174,6 +189,7 @@ def refresh_matchups(tournament_id: str | None = None) -> dict[str, int]:
     only requires this refresh rather than another RK9 scrape.
     """
 
+    create_pairing_database()
     create_matchup_table()
     conn = get_matchup_connection()
     conn.execute("ATTACH DATABASE ? AS main_database", (str(DATABASE_NAME),))
@@ -244,6 +260,10 @@ def refresh_matchups(tournament_id: str | None = None) -> dict[str, int]:
             player1_variant,
             player2_overall,
             player2_variant,
+            player1_day_2_contention,
+            player1_day_2,
+            player2_day_2_contention,
+            player2_day_2,
             match_result,
         ) = row
         player1_points_before = _points_before(
@@ -288,6 +308,10 @@ def refresh_matchups(tournament_id: str | None = None) -> dict[str, int]:
                 player1_variant,
                 player2_overall,
                 player2_variant,
+                player1_day_2_contention,
+                player1_day_2,
+                player2_day_2_contention,
+                player2_day_2,
                 match_result,
                 eligible,
             )
@@ -295,7 +319,7 @@ def refresh_matchups(tournament_id: str | None = None) -> dict[str, int]:
 
     conn.executemany(
         f"INSERT OR REPLACE INTO matchup_records ({MATCHUP_COLUMNS}) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "VALUES (" + ", ".join(["?"] * 29) + ")",
         rows,
     )
     conn.commit()
@@ -794,17 +818,242 @@ def _division_player_counts() -> dict[tuple[str, str], int]:
 
 
 def _is_day_two_contender(
-    points_before: float,
+    points_before: float | None,
     round_number: int,
     rule: tuple[int, int] | None,
 ) -> bool | None:
     """Determine whether a player can still reach the Day 2 threshold."""
 
-    if rule is None:
+    if rule is None or points_before is None:
         return None
     phase_one_rounds, threshold = rule
     remaining_rounds = max(phase_one_rounds - round_number + 1, 0)
     return points_before + (remaining_rounds * 3) >= threshold
+
+
+def refresh_day_two_fields(tournament_id: str | None = None) -> dict[str, int]:
+    """Persist per-round contention and final Day 2 flags upstream.
+
+    ``*_day_2_contention`` describes whether the player could still reach the
+    Day 2 threshold before that pairing. ``*_day_2`` is the final 1/0 result
+    after the phase-one rounds. Both values are written to raw pairing rows,
+    enriched matchup rows, and the primary ``players`` table.
+    """
+
+    create_pairing_database()
+    create_matchup_table()
+    conn = get_matchup_connection()
+    conn.execute("ATTACH DATABASE ? AS main_database", (str(DATABASE_NAME),))
+    clauses = []
+    params: list[object] = []
+    if tournament_id is not None:
+        clauses.append("m.tournament_id = ?")
+        params.append(tournament_id)
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+    rows = conn.execute(
+        f"""
+        SELECT
+            m.match_key, m.tournament_id, m.division, m.round_number,
+            m.status, m.player1_key, m.player1_points, m.player1_outcome,
+            m.player2_key, m.player2_points, m.player2_outcome
+        FROM pairing_matches m
+        {where}
+        """,
+        params,
+    ).fetchall()
+
+    field_sizes = _division_player_counts()
+    player_flags: dict[tuple[str, str], dict[str, int]] = {}
+    match_updates = []
+    for row in rows:
+        (
+            match_key,
+            event_id,
+            division,
+            round_number,
+            status,
+            player1_key,
+            player1_points,
+            player1_outcome,
+            player2_key,
+            player2_points,
+            player2_outcome,
+        ) = row
+        rule = _day_two_rule(field_sizes.get((event_id, division), 0))
+        p1_before = _points_before(player1_points, player1_outcome, status)
+        p2_before = _points_before(player2_points, player2_outcome, status)
+        p1_contention = _is_day_two_contender(p1_before, int(round_number), rule)
+        p2_contention = _is_day_two_contender(p2_before, int(round_number), rule)
+        p1_day_2 = None
+        p2_day_2 = None
+        if rule is not None and status == "complete":
+            phase_one_rounds, threshold = rule
+            if int(round_number) == phase_one_rounds:
+                p1_day_2 = int(
+                    player1_points is not None and player1_points >= threshold
+                )
+                p2_day_2 = int(
+                    player2_points is not None and player2_points >= threshold
+                )
+                if player1_key is not None:
+                    player_flags[(event_id, division)] = player_flags.get(
+                        (event_id, division), {}
+                    )
+                    player_flags[(event_id, division)][player1_key] = p1_day_2
+                if player2_key is not None:
+                    player_flags[(event_id, division)] = player_flags.get(
+                        (event_id, division), {}
+                    )
+                    player_flags[(event_id, division)][player2_key] = p2_day_2
+        match_updates.append(
+            (int(p1_contention) if p1_contention is not None else None,
+             p1_day_2,
+             int(p2_contention) if p2_contention is not None else None,
+             p2_day_2,
+             match_key)
+        )
+
+    conn.executemany(
+        """
+        UPDATE pairing_matches
+        SET player1_day_2_contention = ?, player1_day_2 = ?,
+            player2_day_2_contention = ?, player2_day_2 = ?
+        WHERE match_key = ?
+        """,
+        match_updates,
+    )
+    conn.executemany(
+        """
+        UPDATE matchup_records
+        SET player1_day_2_contention = ?, player1_day_2 = ?,
+            player2_day_2_contention = ?, player2_day_2 = ?
+        WHERE match_key = ?
+        """,
+        match_updates,
+    )
+
+    # The final Day 2 result is a player-level field. Persist it on every
+    # pairing row using a temporary lookup table so the migration stays
+    # set-based even when a tournament has thousands of players.
+    flag_rows = [
+        (event_id, division, player_key, day_2)
+        for (event_id, division), flags in player_flags.items()
+        for player_key, day_2 in flags.items()
+    ]
+    conn.execute(
+        """
+        CREATE TEMP TABLE day_two_flags (
+            tournament_id TEXT,
+            division TEXT,
+            player_key TEXT,
+            day_2 INTEGER,
+            PRIMARY KEY (tournament_id, division, player_key)
+        )
+        """
+    )
+    conn.executemany(
+        "INSERT INTO day_two_flags VALUES (?, ?, ?, ?)",
+        flag_rows,
+    )
+    for event_id, division in field_sizes:
+        if tournament_id is not None and event_id != tournament_id:
+            continue
+        flags = player_flags.get((event_id, division), {})
+        players = conn.execute(
+            """
+            SELECT player_key
+            FROM main_database.players
+            WHERE tournament_id = ? AND division = ?
+            """,
+            (event_id, division),
+        ).fetchall()
+        conn.executemany(
+            """
+            INSERT OR IGNORE INTO day_two_flags
+                (tournament_id, division, player_key, day_2)
+            VALUES (?, ?, ?, ?)
+            """,
+            [
+                (event_id, division, row[0], flags.get(row[0], 0))
+                for row in players
+            ],
+        )
+    conn.execute(
+        """
+        UPDATE pairing_matches
+        SET player1_day_2 = (
+            SELECT day_2 FROM day_two_flags f
+            WHERE f.tournament_id = pairing_matches.tournament_id
+              AND f.division = pairing_matches.division
+              AND f.player_key = pairing_matches.player1_key
+        )
+        WHERE player1_key IS NOT NULL
+        """
+    )
+    conn.execute(
+        """
+        UPDATE pairing_matches
+        SET player2_day_2 = (
+            SELECT day_2 FROM day_two_flags f
+            WHERE f.tournament_id = pairing_matches.tournament_id
+              AND f.division = pairing_matches.division
+              AND f.player_key = pairing_matches.player2_key
+        )
+        WHERE player2_key IS NOT NULL
+        """
+    )
+    conn.execute(
+        """
+        UPDATE matchup_records
+        SET player1_day_2 = (
+            SELECT day_2 FROM day_two_flags f
+            WHERE f.tournament_id = matchup_records.tournament_id
+              AND f.division = matchup_records.division
+              AND f.player_key = matchup_records.player1_key
+        )
+        WHERE player1_key IS NOT NULL
+        """
+    )
+    conn.execute(
+        """
+        UPDATE matchup_records
+        SET player2_day_2 = (
+            SELECT day_2 FROM day_two_flags f
+            WHERE f.tournament_id = matchup_records.tournament_id
+              AND f.division = matchup_records.division
+              AND f.player_key = matchup_records.player2_key
+        )
+        WHERE player2_key IS NOT NULL
+        """
+    )
+
+    player_updates = []
+    for event_id, division in field_sizes:
+        if tournament_id is not None and event_id != tournament_id:
+            continue
+        flags = player_flags.get((event_id, division), {})
+        players = conn.execute(
+            """
+            SELECT player_key
+            FROM main_database.players
+            WHERE tournament_id = ? AND division = ?
+            """,
+            (event_id, division),
+        ).fetchall()
+        player_updates.extend(
+            (flags.get(row[0], 0), row[0], event_id)
+            for row in players
+        )
+    conn.executemany(
+        "UPDATE main_database.players SET day_2 = ? WHERE player_key = ? AND tournament_id = ?",
+        player_updates,
+    )
+    conn.commit()
+    conn.close()
+    return {
+        "pairings": len(rows),
+        "player_flags": len(player_updates),
+    }
 
 
 def get_matchup_round_cohorts(
@@ -831,8 +1080,8 @@ def get_matchup_round_cohorts(
         subset=[
             label1,
             label2,
-            "player1_points_before",
-            "player2_points_before",
+            "player1_day_2_contention",
+            "player2_day_2_contention",
         ]
     ).copy()
     if max_round is not None:
@@ -843,19 +1092,11 @@ def get_matchup_round_cohorts(
             & (records[label2] != "Unknown")
         ].copy()
 
-    field_sizes = _division_player_counts()
     directed_frames = []
     for _, record in records.iterrows():
-        rule = _day_two_rule(
-            field_sizes.get((record["tournament_id"], division), 0)
-        )
         round_number = int(record["round_number"])
-        p1_contention = _is_day_two_contender(
-            record["player1_points_before"], round_number, rule
-        )
-        p2_contention = _is_day_two_contender(
-            record["player2_points_before"], round_number, rule
-        )
+        p1_contention = bool(record["player1_day_2_contention"])
+        p2_contention = bool(record["player2_day_2_contention"])
         directed_frames.extend(
             [
                 {
@@ -1084,6 +1325,75 @@ def get_archetype_field_performance(
     ).reset_index(drop=True)
 
 
+def get_day_two_meta_share(
+    tournament_id: str,
+    division: str = "Masters",
+    use_variants: bool = False,
+) -> pd.DataFrame:
+    """Return deck composition by round among Day 2 contenders.
+
+    Each player's deck contributes at most once per round. The denominator is
+    the number of players whose stored ``*_day_2_contention`` flag is true in
+    that round, so the result describes the live Day 2 field rather than the
+    composition of all pairing rows.
+    """
+
+    records = get_matchup_records(tournament_id, division)
+    if records.empty:
+        return pd.DataFrame()
+
+    label1 = "player1_variant" if use_variants else "player1_overall"
+    label2 = "player2_variant" if use_variants else "player2_overall"
+    contender_frames = [
+        records.loc[
+            records["player1_day_2_contention"] == 1,
+            ["round_number", "player1_key", label1],
+        ]
+        .dropna()
+        .rename(columns={"player1_key": "player_key", label1: "group"}),
+        records.loc[
+            records["player2_day_2_contention"] == 1,
+            ["round_number", "player2_key", label2],
+        ]
+        .dropna()
+        .rename(columns={"player2_key": "player_key", label2: "group"}),
+    ]
+    contenders = pd.concat(contender_frames, ignore_index=True)
+    contenders = contenders.drop_duplicates(
+        subset=["round_number", "player_key"]
+    )
+    if contenders.empty:
+        return pd.DataFrame()
+
+    summary = (
+        contenders.groupby(["round_number", "group"], as_index=False)
+        .agg(players=("player_key", "nunique"))
+    )
+    totals = (
+        contenders.groupby("round_number", as_index=False)
+        .agg(total_day_2_contenders=("player_key", "nunique"))
+    )
+    summary = summary.merge(totals, on="round_number", how="left")
+    summary["meta_share"] = (
+        summary["players"] / summary["total_day_2_contenders"] * 100
+    )
+    summary["round"] = summary["round_number"]
+    summary["grouping"] = "variant" if use_variants else "archetype"
+    return summary[
+        [
+            "round",
+            "group",
+            "players",
+            "total_day_2_contenders",
+            "meta_share",
+            "grouping",
+        ]
+    ].sort_values(
+        ["round", "players", "group"],
+        ascending=[True, False, True],
+    ).reset_index(drop=True)
+
+
 def get_archetype_round_performance(
     tournament_id: str,
     division: str = "Masters",
@@ -1117,17 +1427,11 @@ def get_archetype_round_performance(
     if records.empty:
         return pd.DataFrame()
 
-    field_size = _division_player_counts().get((tournament_id, division), 0)
-    rule = _day_two_rule(field_size)
     directed_frames = []
     for _, record in records.iterrows():
         round_number = int(record["round_number"])
-        p1_contention = _is_day_two_contender(
-            record["player1_points_before"], round_number, rule
-        )
-        p2_contention = _is_day_two_contender(
-            record["player2_points_before"], round_number, rule
-        )
+        p1_contention = bool(record["player1_day_2_contention"])
+        p2_contention = bool(record["player2_day_2_contention"])
         directed_frames.extend(
             [
                 {

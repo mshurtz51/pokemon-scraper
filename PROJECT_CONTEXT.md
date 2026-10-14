@@ -83,6 +83,10 @@ are reviewed. Matchup `win_rate` uses match-point weighting, with ties worth
 one third of a win; `decisive_win_rate` remains available for comparisons that
 exclude ties.
 
+Queued next: a round-level archetype and variant field-composition report
+using the stored Day 2 contention flags, so later rounds can be compared with
+the tournament-wide deck mix.
+
 ## 4. RK9 Scraper
 
 Target pages include RK9 tournament roster and decklist pages.
@@ -364,6 +368,7 @@ Average Finish
 PI Top 64
 PI Top 128
 PI Top 512
+Made Day 2
 ```
 
 Users select 2–5 archetypes.

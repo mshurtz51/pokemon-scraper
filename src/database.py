@@ -78,7 +78,9 @@ def create_database():
 
             matched INTEGER,
 
-            score REAL
+            score REAL,
+
+            day_2 INTEGER
 
         )
     """)
@@ -133,6 +135,8 @@ def create_database():
         "matched": "INTEGER",
 
         "score": "REAL",
+
+        "day_2": "INTEGER",
 
     }
 
@@ -246,6 +250,7 @@ def insert_players(players):
             player.country,
             player.division,
             player.standing,
+            player.day_2,
         ))
 
     cursor.executemany(
@@ -258,10 +263,11 @@ def insert_players(players):
             last_name,
             country,
             division,
-            standing
+            standing,
+            day_2
 
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
         player_rows,
     )
