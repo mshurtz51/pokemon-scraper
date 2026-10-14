@@ -1079,8 +1079,28 @@ def get_archetype_round_performance(
         summary = pd.concat([summary, all_summary], ignore_index=True)
 
     status_order = {"all": 0, "yes": 1, "no": 2, "not_applicable": 3}
+    totals = (
+        summary.groupby(["archetype", "day_2_contention"], as_index=False)
+        .agg(
+            games=("games", "sum"),
+            wins=("wins", "sum"),
+            losses=("losses", "sum"),
+            ties_or_unknown=("ties_or_unknown", "sum"),
+        )
+    )
+    totals["decisive_games"] = totals["wins"] + totals["losses"]
+    totals["win_rate"] = totals["wins"] / totals["decisive_games"].where(
+        totals["decisive_games"] > 0
+    )
+    totals["round"] = "TOTAL"
+    summary = pd.concat([summary, totals], ignore_index=True)
     summary["_status_order"] = summary["day_2_contention"].map(status_order)
+    summary["_round_order"] = summary["round"].map(
+        lambda value: 10**9 if value == "TOTAL" else int(value)
+    )
     return summary.sort_values(
-        ["round", "archetype", "_status_order"],
+        ["_round_order", "archetype", "_status_order"],
         ascending=[True, True, True],
-    ).drop(columns=["_status_order", "day_2_contender"]).reset_index(drop=True)
+    ).drop(
+        columns=["_status_order", "_round_order", "day_2_contender"],
+    ).reset_index(drop=True)
