@@ -16,6 +16,12 @@ def main() -> None:
     parser.add_argument("--archetype")
     parser.add_argument("--variants", action="store_true")
     parser.add_argument("--max-round", type=int)
+    parser.add_argument(
+        "--round",
+        type=int,
+        dest="selected_round",
+        help="Show only one round, ordered by survivability index.",
+    )
     args = parser.parse_args()
 
     report = get_day_two_survival_curve(
@@ -26,6 +32,12 @@ def main() -> None:
     )
     if args.archetype:
         report = report[report["group"] == args.archetype]
+    if args.selected_round is not None:
+        report = report[report["round"] == args.selected_round].copy()
+        report = report.sort_values(
+            ["survival_index", "group"],
+            ascending=[False, True],
+        )
     if report.empty:
         print("No Day 2 survival data matched those filters.")
         return

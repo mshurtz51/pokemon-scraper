@@ -143,6 +143,7 @@ against its round-one contenders and the field-wide conversion baseline:
 
 ```bash
 python run_day_two_survival.py --tournament-id TU01w1D52rjGebrE8szS --archetype Crustle
+python run_day_two_survival.py --tournament-id TU01w1D52rjGebrE8szS --round 8
 ```
 
 Matchup `win_rate` uses the tournament scoring convention: a win contributes
