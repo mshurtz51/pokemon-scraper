@@ -113,7 +113,13 @@ enriched with one detail request per card by using `--set-code`, for example:
 
 ```bash
 python run_card_catalog.py --set-code me01
+python run_card_catalog.py --set-code 30th --details
 ```
+
+The local catalog also supports the 30th Anniversary set used by card IDs such
+as `30th-066`. Official Mega Evolution special-set image paths use the
+`ME2PT5` asset prefix. The `metadata/archetype_cards` worksheet is maintained
+manually; ingestion and visualization validation do not modify it.
 
 ## Analytics and visualizations
 
@@ -256,10 +262,22 @@ contact-sheet PNG under `src/visualizations/output/visualizations/`. Two
 configured cards are rendered side by side. Short numeric IDs are normalized
 to the catalog's three-digit form, such as `sv09-09` to `sv09-009`.
 
+Candidate IDs and official/TCGdex asset links for unavailable or alternate
+printings are collected in
+`exports/archetype_card_image_candidates.csv` for manual metadata updates.
+
 The current local catalog contains 4,393 cards across 22 expansions and has
 linked 212,077 existing RK9 deck-card rows to catalog IDs. These counts are
 validation results for the current database and will grow as more tournaments
 are imported.
+
+## Current development sequence
+
+The current focus is completing and validating matchup and pairing
+visualizations using the enriched RK9 pairing records. After that work is
+stable, the existing deck and metagame visualizations will be upgraded to use
+representative card images and the card catalog. The public-facing website
+remains a later phase.
 
 ## License
 
