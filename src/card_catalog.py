@@ -54,7 +54,7 @@ SET_CODE_ALIASES = {
 OFFICIAL_SET_CODES = {
     "me01": "ME01",
     "me02": "ME02",
-    "me02.5": "ME02PT5",
+    "me02.5": "ME2PT5",
     "me03": "ME03",
     "me04": "ME04",
     "me05": "ME05",
