@@ -244,6 +244,11 @@ Violet expansion blocks. The first implementation stores image URLs rather
 than committing binary image files; visualizations can fetch or cache those
 official assets as needed.
 
+The current local catalog contains 4,393 cards across 22 expansions and has
+linked 212,077 existing RK9 deck-card rows to catalog IDs. These counts are
+validation results for the current database and will grow as more tournaments
+are imported.
+
 ## License
 
 Personal analytics project.
