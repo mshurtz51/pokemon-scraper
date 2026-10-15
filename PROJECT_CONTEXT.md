@@ -106,6 +106,15 @@ Round-level archetype and variant field composition now uses the stored Day 2
 contention flags. The survival report additionally compares each group's
 round-by-round conversion with the field-wide conversion baseline.
 
+The main database now includes a `cards` catalog and a nullable `card_id` on
+`deck_cards`. Card IDs are stable catalog IDs such as `me01-001`, allowing
+card-level analytics and visuals to distinguish printings that share a name.
+The catalog currently ingests all Mega Evolution and Scarlet & Violet
+expansions from structured TCGdex set data, while storing official Pokémon
+card-page and image URLs for visual assets. Pokedata is not used as the source
+of card data. Bulk block ingestion uses set summaries; individual sets can be
+enriched with detailed card metadata through `run_card_catalog.py`.
+
 ## 4. RK9 Scraper
 
 Target pages include RK9 tournament roster and decklist pages.

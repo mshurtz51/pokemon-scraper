@@ -7,20 +7,20 @@ import sqlite3
 from src.config import DATABASE_NAME
 
 
-def get_connection():
+def get_connection(database_path=DATABASE_NAME):
     """
     Return a connection to the SQLite database.
     """
 
-    return sqlite3.connect(str(DATABASE_NAME))
+    return sqlite3.connect(str(database_path))
 
 
-def create_database():
+def create_database(database_path=DATABASE_NAME):
     """
     Create all database tables if they do not exist.
     """
 
-    conn = get_connection()
+    conn = get_connection(database_path)
     cursor = conn.cursor()
 
     cursor.execute("""
@@ -115,6 +115,46 @@ def create_database():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS cards (
+
+            card_id TEXT PRIMARY KEY,
+
+            language TEXT NOT NULL,
+
+            set_code TEXT NOT NULL,
+
+            card_number TEXT NOT NULL,
+
+            card_name TEXT NOT NULL,
+
+            category TEXT,
+
+            rarity TEXT,
+
+            card_types TEXT,
+
+            stage TEXT,
+
+            hp TEXT,
+
+            official_card_url TEXT,
+
+            official_image_url TEXT,
+
+            tcgdex_image_url TEXT,
+
+            metadata_source TEXT NOT NULL,
+
+            image_source TEXT NOT NULL,
+
+            updated_at TEXT NOT NULL,
+
+            UNIQUE (language, set_code, card_number)
+
+        )
+    """)
+
     #
     # Add classification columns for existing databases.
     #
@@ -150,6 +190,34 @@ def create_database():
                 ADD COLUMN {column} {datatype}
                 """
             )
+
+    cursor.execute("PRAGMA table_info(deck_cards)")
+
+    deck_card_columns = {
+        row[1]
+        for row in cursor.fetchall()
+    }
+
+    if "card_id" not in deck_card_columns:
+
+        cursor.execute("""
+            ALTER TABLE deck_cards
+            ADD COLUMN card_id TEXT
+        """)
+
+    cursor.execute("PRAGMA table_info(cards)")
+
+    card_columns = {
+        row[1]
+        for row in cursor.fetchall()
+    }
+
+    if "tcgdex_image_url" not in card_columns:
+
+        cursor.execute("""
+            ALTER TABLE cards
+            ADD COLUMN tcgdex_image_url TEXT
+        """)
 
     conn.commit()
     conn.close()

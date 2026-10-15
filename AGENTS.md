@@ -76,6 +76,16 @@ Create visualizations
 Public-facing interface
 ```
 
+## Card Catalog
+
+The main database includes a `cards` table and `deck_cards.card_id`. Card IDs
+use stable catalog identifiers such as `me01-001` and `sv10-001`, while raw
+RK9 set codes remain available for traceability. The catalog ingestion runner
+is `run_card_catalog.py`; `--block me` and `--block sv` ingest expansion-set
+summaries, and a single set can be enriched with detailed metadata. Official
+Pokémon card-page and image URLs are stored for visual use. Pokedata is not a
+card-data source for this project.
+
 ## RK9 Scraping
 
 Roster information includes player ID, first name, last name, country, division, deck list link, and standing.

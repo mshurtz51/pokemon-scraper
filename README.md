@@ -8,6 +8,7 @@ The project is currently focused on building a reliable data and visualization f
 
 - Scrapes tournament rosters and public deck lists from RK9.
 - Parses deck lists into structured card data.
+- Maintains a stable card catalog with set/card IDs and official Pokémon image URLs.
 - Stores tournaments, players, decks, cards, and classifications in SQLite.
 - Classifies decks by archetype and variant using the project’s rule system.
 - Calculates tournament metrics such as meta share, average finish, card inclusion, conversion, and performance index.
@@ -91,8 +92,28 @@ The main tables are:
 | `players` | Player identity, division, standing, archetype, variant, and classification data |
 | `decks` | Player-to-deck-list relationships |
 | `deck_cards` | Parsed cards and quantities for each deck |
+| `cards` | Stable card identities, metadata, and image URLs |
 
 Player identity uses the project’s composite `player_key` based on first name, last name, and division. This preserves the established handling of obfuscated RK9 player IDs.
+
+Card identity uses a catalog `card_id` such as `me01-001` or `sv10-001`, while
+the raw RK9 set code and card number remain in `deck_cards` for traceability.
+The catalog stores official Pokémon card-page and image URLs, plus the
+structured metadata source URL. Pokedata is not used as the card source.
+
+Ingest the Mega Evolution or Scarlet & Violet expansion blocks with:
+
+```bash
+python run_card_catalog.py --block me
+python run_card_catalog.py --block sv
+```
+
+Block ingestion uses set-summary responses for speed. A single set can be
+enriched with one detail request per card by using `--set-code`, for example:
+
+```bash
+python run_card_catalog.py --set-code me01
+```
 
 ## Analytics and visualizations
 
@@ -218,8 +239,10 @@ development phase is:
 
 The public interface remains a later phase.
 
-Actual card images remain deferred until a reliable card-image source is
-available.
+Card catalog ingestion is now available for the Mega Evolution and Scarlet &
+Violet expansion blocks. The first implementation stores image URLs rather
+than committing binary image files; visualizations can fetch or cache those
+official assets as needed.
 
 ## License
 
