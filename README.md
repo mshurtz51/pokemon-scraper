@@ -244,6 +244,18 @@ Violet expansion blocks. The first implementation stores image URLs rather
 than committing binary image files; visualizations can fetch or cache those
 official assets as needed.
 
+Representative archetype and variant card art can be checked with:
+
+```bash
+python run_archetype_cards.py
+```
+
+This reads the `archetype_cards` worksheet, validates both configured card ID
+columns against the local catalog, and produces a readable PDF plus a large
+contact-sheet PNG under `src/visualizations/output/visualizations/`. Two
+configured cards are rendered side by side. Short numeric IDs are normalized
+to the catalog's three-digit form, such as `sv09-09` to `sv09-009`.
+
 The current local catalog contains 4,393 cards across 22 expansions and has
 linked 212,077 existing RK9 deck-card rows to catalog IDs. These counts are
 validation results for the current database and will grow as more tournaments

@@ -21,6 +21,11 @@ raw/
 # Exported files
 exports/
 
+# Locally cached card art and generated contact sheets
+assets/cards/cache/
+src/visualizations/output/visualizations/archetype_cards_contact_sheet.png
+src/visualizations/output/visualizations/archetype_cards_contact_sheet.pdf
+
 # Windows
 Thumbs.db
 
